@@ -1,6 +1,6 @@
 import random
 import os
-from m19937_crack import RandomSolver
+from mt19937_crack import RandomSolver
 
 def test_recover_seed():
     print("============================ RECOVER SEED TEST ============================")
@@ -56,7 +56,7 @@ def test_skipping_outputs():
                 })
 
             case 1:
-                nbits = os.urandom(1)[0] % 32 + 1
+                nbits = os.urandom(1)[0] % 128 + 1
                 _, z3_val = randomSolver.skip_getrandbits(nbits)
                 skipInfos.append({
                     "z3_val": z3_val,
@@ -81,13 +81,15 @@ def test_skipping_outputs():
     # Check with Python's outputs
     def format_output_test(type, guesser_val, lib_output):
         if "random.random" in type:
-            guesser_output = eval(f'{randomSolver.answer[guesser_val]}')
+            guesser_output = randomSolver.get_skipped_variable_answer(guesser_val)
 
         if "random.getrandbits" in type:
-            guesser_output = randomSolver.answer[guesser_val]
+            guesser_output = randomSolver.get_skipped_variable_answer(guesser_val)
 
         if "random.randbytes" in type:
-            guesser_output = bytes([int(f'{randomSolver.answer[val]}') for val in guesser_val]).hex()
+            guesser_output = bytes(
+                [randomSolver.get_skipped_variable_answer(val) for val in guesser_val]
+            ).hex()
             lib_output = lib_output.hex()
 
         print(f"[i] {type}:")
@@ -105,5 +107,4 @@ def test_skipping_outputs():
 if __name__ == '__main__':
     # test_recover_seed()
     test_skipping_outputs()
-
     pass

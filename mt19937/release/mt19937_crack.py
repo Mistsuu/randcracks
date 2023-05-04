@@ -14,7 +14,7 @@ f = 1812433253
 def z3_sn(s_i, s_i1, s_m):
     s = (s_i & 0x80000000) | (s_i1 & 0x7fffffff)
     sA = LShR(s, 1)
-    sA = If(s & 1 == 0x1, sA ^ a, sA)
+    sA ^= a * (s_i1 & 1)
     return simplify(s_m ^ sA)
 
 u, d = 11, 0xFFFFFFFF
@@ -26,7 +26,7 @@ def z3_tamper(y):
     y = y ^ ((y << s) & b)
     y = y ^ ((y << t) & c)
     y = y ^ (LShR(y, l))
-    return y
+    return simplify(y)
 
 # ----------------- functions used when initialize --------------------
 
@@ -313,6 +313,7 @@ class RandomSolver():
         
         # List of states variables
         z3_state_vars = []
+        z3_output_pieces = []
 
         shift = 0
         for remaining_bits in range(nbits, 0, -32):
@@ -322,26 +323,26 @@ class RandomSolver():
             z3_state_var,           = list(self.gen_state_rvars(1))
             z3_output_getrandbits32 = z3_tamper(z3_state_var)
             if remaining_bits < 32:
-                z3_output_getrandbits32 = LShR(z3_output_getrandbits32, 32 - remaining_bits)
-
-            # Add constraints
-            self.solver_constrants.append((
-                Extract(
-                    shift + min(32, remaining_bits) - 1, 
-                    shift, 
-                    z3_output_var
-                ) 
-                == 
-                Extract(
-                    min(32, remaining_bits) - 1,
-                    0,
-                    z3_output_getrandbits32
+                z3_output_getrandbits32 = (
+                    Extract(
+                        31,
+                        32 - remaining_bits,
+                        z3_output_getrandbits32
+                    )
                 )
-            ))
 
             # Update
             shift += 32
             z3_state_vars.append(z3_state_var)
+            z3_output_pieces.append(z3_output_getrandbits32)
+
+        # Add constraints
+        self.solver_constrants.append(
+            z3_output_var == Concat(*z3_output_pieces[::-1])
+                if len(z3_output_pieces) > 1
+                else
+            z3_output_var == z3_output_pieces[0]
+        )
 
         return z3_state_vars, z3_output_var
 
@@ -369,14 +370,12 @@ class RandomSolver():
         )
 
         # Add constraints
-        for i in range(nbytes):
-            self.solver_constrants.append((
-                Extract(
-                    (i+1)*8-1,
-                    i*8,
-                    z3_output_getrandbits
-                ) == z3_output_vars[i]
-            ))
+        self.solver_constrants.append(
+            Concat(*z3_output_vars[::-1]) == z3_output_getrandbits
+                if len(z3_output_vars) > 1
+                else 
+            z3_output_vars[0] == z3_output_getrandbits
+        )
 
         return z3_state_vars, z3_output_vars
 
@@ -442,7 +441,7 @@ class RandomSolver():
         assert self.started_finding_seed, \
             ValueError("You need to initiate the seed finding process first.")
 
-        # Solve for key variables
+        # Attempt to solve if not solved
         if self.answer == None:
             self.solve()
         
@@ -451,6 +450,33 @@ class RandomSolver():
         for key_variable in self.key_variables:
             key += self.answer[key_variable].as_long().to_bytes(4, 'little') # note: if machine is big-endian, we need to put this to 'big'
         return int.from_bytes(key, 'little')
+    
+    def get_skipped_variable_answer(self, variable: BitVecRef | FPRef) -> int | float:
+        # Attempt to solve if not solved
+        if self.answer == None:
+            self.solve()
+
+        try:
+            if type(variable) == BitVecRef:
+                return self.answer[variable].as_long()
+            elif type(variable) == FPRef:
+                # It's always 64-bit value, so
+                # we don't have to worry about
+                # precision here.
+                sign        = self.answer[variable].sign()
+                significand = self.answer[variable].significand_as_long()
+                exponent    = self.answer[variable].exponent_as_long()
+                return (
+                    (-1 if sign else 1) 
+                            *
+                    (significand / 2**52 + 1)
+                            *
+                    2**(exponent-1023)
+                )
+        except:
+            raise ValueError("This variable does not exist in the constraint system!")
+        
+        raise ValueError(f"Not implemented for this type of variable ({type(variable)})")
 
     # =============================== GENERATE NEW VALUES ===============================
 
