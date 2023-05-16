@@ -4,3 +4,9 @@ misc
 */__pycache__
 */misc
 */.old
+
+
+# Custom
+/xorshift128++/cython/*.c
+/xorshift128++/cython/lib
+/xorshift128++/cython/obj
