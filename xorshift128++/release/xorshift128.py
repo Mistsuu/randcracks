@@ -202,6 +202,9 @@ class RandomSolver:
         # Cache for every value of M^x
         self.cache_pow_M = []
 
+    # ------------------------- some crazy inner stuffs  ----------------------
+    #                  ( not really crazy, I just want to sleep )
+
     def update_cache_pow_M(self):
         for _ in range(64):
             self.cache_pow_M.append(self.T)
@@ -219,6 +222,8 @@ class RandomSolver:
             self.current_pos[start_pos] -= 1
             self.forward_pos[start_pos] += 1
     
+    # ------------------------ submit_xx() sub-functions -----------------------
+
     def submit_state_bits(self, state_partial_bits: str, ibit_l: int, ibit_r: int) -> None:
         """
             Submit bits of position [`ibit_l`, `ibit_r`] of the current state.
@@ -230,16 +235,15 @@ class RandomSolver:
         assert len(state_partial_bits) == ibit_r - ibit_l + 1, \
             ValueError(f"Sanity check: You must submit a bitstring of len={ibit_r - ibit_l + 1}!")
 
-        # Add bits to known bits
         self.known_bits_stack += state_partial_bits
 
         # Iterate through every possible start positions
+        # to update the matrices in a corresponding way.
         for start_pos in range(64):
             T = self.get_M_pow_i(self.current_pos[start_pos])
             for ibit in range(ibit_l, ibit_r + 1):
                 self.S[start_pos].append(T[ibit])
 
-        # Update pointers of current_pos
         self.update_inner_states()
 
     def submit_random(self, value: float) -> None:
@@ -257,8 +261,23 @@ class RandomSolver:
     def submit_random_mul_const(self, value: float, const: int) -> None:
         """
             Add result of `Math.random() * CONST | 0`.
+            (not done yet...)
         """
         pass
+
+    # ------------------------ skip_xx() sub-functions -----------------------
+    #                      (although there's just skip_random())
+    def skip_random(self):
+        """
+            Probably will be able to return "ticket"
+            to a skipped value?
+        """
+
+        # Yeah... Just do nothing.
+        self.update_inner_states()
+
+    # --------------------------------  solve():  -------------------------------
+    #                             retrieve state array 
 
     def solve(self, force_redo=False, debug=False) -> None:
         # If it's already solved, just don't care 
@@ -297,6 +316,12 @@ class RandomSolver:
                         RandomSolutionVariant(w, K, self.forward_pos[start_pos])[0]
                     )
 
+        # Almost forgot to let user know
+        # that the solution might not be possible...
+        if self.n_solutions == 0:
+            self.answers = None
+            raise ValueError("Can't solve this shift!")
+
 if __name__ == '__main__':
     randSolver = RandomSolver()
     randSolver.submit_random(0.15589505829365424)
@@ -307,7 +332,7 @@ if __name__ == '__main__':
 
     randSolver.solve()
     print(f'[i] {randSolver.n_solutions} potential solutions exists.')
-    for i in range(64):
+    for i in range(randSolver.n_solutions):
         JSRand = randSolver.answers[i]
         print(JSRand.random())
         print(JSRand.random())

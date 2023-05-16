@@ -78,11 +78,3 @@ from cmatrixN import (
     transpose,
     kernel_right
 )
-
-if __name__ == '__main__':
-    M = rand_matN(128)
-    debug_matN(M, 128)
-
-    N = kernel_right(M, 128, 128)
-    for i in range(len(N)):
-        debug_vecN(N[i], 128)
