@@ -10,8 +10,8 @@ This project is based on the work of [v8_rand_buster](https://github.com/d0nutpt
 However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. 
 
 ## Pros ✅ include:
-- `< 1` **second** of solve time.
-- Have some *(but a little bit of cumbersome)* way to enumerate through different solutions.
+- `< 1` **second** of solve time *(if you don't stuff too much (like 10000) inputs to the solver)*.
+- Have some *(but a little bit cumbersome)* way to enumerate through different solutions.
 - Can work better with a much smaller `CONST`.
 - No `sagemath` required.
 
