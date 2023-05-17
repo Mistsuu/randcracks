@@ -152,13 +152,13 @@ xorshift128_mat = generate_mat_xorshift128()
 #                              SOLVER
 ####################################################################
 
-class RandomSolutionVariant:
+class RandomGeneratorVariant:
     def __init__(self, w: gmpy2.mpz, K: list, forward_pos: int) -> None:
         self.w = w
         self.K = K
-        self.forward_pos = forward_pos
-        self.n_variants = pow(2, len(K))
         self.cache = {}
+        self.n_variants = pow(2, len(K))
+        self.forward_pos = forward_pos
 
     def __getitem__(self, key: int) -> RandomGenerator:
         assert 0 <= key < self.n_variants, \
@@ -182,7 +182,7 @@ class RandomSolutionVariant:
         return self.cache[key]
     
     def random(self):
-        raise ValueError("This is not a RandomGenerator object. This is RandomSolutionVariant, which contains multiple solutions of RandomSolver. To access RandomGenerator object, uses [] operator. The argument should be [0, self.n_variants).")
+        raise ValueError(f"This is not a RandomGenerator object. This is RandomGeneratorVariant, which generates variants of RandomGenerator based on the solutions of RandomSolver. To access a RandomGenerator object, use [] operator. The argument should be in the range of [0, {self.n_variants}).")
 
 class RandomSolver:
     def __init__(self) -> None:
@@ -309,11 +309,11 @@ class RandomSolver:
                 # because n_solutions scale with O(2^N))
                 if len(K) > 0:
                     self.answers.append(
-                        RandomSolutionVariant(w, K, self.forward_pos[start_pos])
+                        RandomGeneratorVariant(w, K, self.forward_pos[start_pos])
                     )
                 else:
                     self.answers.append(
-                        RandomSolutionVariant(w, K, self.forward_pos[start_pos])[0]
+                        RandomGeneratorVariant(w, K, self.forward_pos[start_pos])[0]
                     )
 
         # Almost forgot to let user know
@@ -321,44 +321,3 @@ class RandomSolver:
         if self.n_solutions == 0:
             self.answers = None
             raise ValueError("Can't solve this shift!")
-
-if __name__ == '__main__':
-    randSolver = RandomSolver()
-    randSolver.submit_random(0.15589505829365424)
-    randSolver.submit_random(0.4551868164930428)
-    randSolver.submit_random(0.16771727497700617)
-    randSolver.submit_random(0.10685554388753915)
-    randSolver.submit_random(0.4275409415243707)
-
-    randSolver.solve()
-    print(f'[i] {randSolver.n_solutions} potential solutions exists.')
-    for i in range(randSolver.n_solutions):
-        JSRand = randSolver.answers[i]
-        print(JSRand.random())
-        print(JSRand.random())
-        print('--------')
-
-    """
-    > Math.random()
-    0.15589505829365424
-    > Math.random()
-    0.4551868164930428
-    > Math.random()
-    0.16771727497700617
-    > Math.random()
-    0.10685554388753915
-    > Math.random()
-    0.4275409415243707
-    > Math.random()
-    0.14465836581416336
-    > Math.random()
-    0.7161265607850553
-    > Math.random()
-    0.9930565861959089
-    > Math.random()
-    0.5910911402852297
-    > Math.random()
-    0.6067497666127513
-    > Math.random()
-    0.9498573537777268
-    """

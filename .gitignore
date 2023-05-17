@@ -5,8 +5,7 @@ misc
 */misc
 */.old
 
-
-# Custom
-/xorshift128++/cython/*.c
-/xorshift128++/cython/lib
-/xorshift128++/cython/obj
+# Custom for XORShift128+
+/xorshift128p/cython/*.c
+/xorshift128p/cython/lib
+/xorshift128p/cython/obj
