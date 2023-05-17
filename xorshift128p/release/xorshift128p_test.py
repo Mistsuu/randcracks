@@ -41,7 +41,7 @@ def sumbit_random_test():
     0.9498573537777268
     """
 
-# Example using outputs from test/serial-gen.js
+# Example using outputs from test/serial-gen14.js
 def submit_random_mul_const_test():
     # ------ Generate for later validation.
     import math
@@ -50,19 +50,19 @@ def submit_random_mul_const_test():
         for i in range(32):
             if i == 4 or i == 8 or i == 12 or i == 24:
                 serial += '-'
-            serial += hex(math.floor(random_fn() * 16))[2:]
+            serial += hex(math.floor(random_fn() * 14))[2:]
         return serial
 
     # ------ List of outputs from script.
     old_serials = [
-        "a61b-454f-7206-41f5127c90bd-b3919692",
-        "1b41-e83d-91c9-e67d26711a35-dc72f582",
-        "fe6d-e87e-ef9e-72f0b977fd66-e5433f8f",
+        "67a1-1d47-cb35-748ddc6ca763-0cb27a5d",
+        "1b68-2917-0434-c4b7d09dc895-10197c33",
+        "0a74-0653-dd09-dd19541666c1-9ca0bcbc",
+        "5167-a8a6-d975-dab44159d1dc-a14a6d6c",
     ]
     new_serials = [
-        "9660-7735-5a60-f965eef335b0-170deba4",  # I swear these are from script :3
-        "db90-ff8e-18a7-a94ee6c84e02-5eb905a0",  # I swear these are from script :3
-        "8b92-196e-de9d-3af97a6cd316-4f74c655",  # I swear these are from script :3
+        "cb49-565d-9a9c-897c171bb8db-8481b44a",
+        "1c5a-9973-8ac5-6967258a57c2-dc8ca105",
     ]
 
     # ------ Convert to list of output numbers
@@ -78,11 +78,10 @@ def submit_random_mul_const_test():
 
     randSolver = RandomSolver()
     for random_output in random_outputs:
-        randSolver.submit_random_mul_const(random_output, 16)
+        randSolver.submit_random_mul_const(random_output, 14)
     randSolver.solve()
 
     print(f'[i] {randSolver.n_solutions} potential solutions exists.')
-    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
     print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
     print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
 
@@ -163,5 +162,5 @@ def submit_random_mul_const_test_underdetermined_system():
 
 if __name__ == '__main__':
     # sumbit_random_test()
-    # submit_random_mul_const_test()
-    submit_random_mul_const_test_underdetermined_system()
+    submit_random_mul_const_test()
+    # submit_random_mul_const_test_underdetermined_system()
