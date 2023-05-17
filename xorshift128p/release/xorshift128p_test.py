@@ -1,6 +1,6 @@
 from xorshift128p_crack import RandomSolver
 
-if __name__ == '__main__':
+def sumbit_random_test():
     randSolver = RandomSolver()
     randSolver.submit_random(0.15589505829365424)
     randSolver.submit_random(0.4551868164930428)
@@ -40,3 +40,52 @@ if __name__ == '__main__':
     > Math.random()
     0.9498573537777268
     """
+
+# Example using outputs from test/serial-gen.js
+def submit_random_mul_const_test():
+    # ------ Generate for later validation.
+    import math
+    def generate_new_serial(random_fn):
+        serial = ''
+        for i in range(32):
+            if i == 4 or i == 8 or i == 12 or i == 24:
+                serial += '-'
+            serial += hex(math.floor(random_fn() * 16))[2:]
+        return serial
+
+    # ------ List of outputs from script.
+    old_serials = [
+        "a61b-454f-7206-41f5127c90bd-b3919692",
+        "1b41-e83d-91c9-e67d26711a35-dc72f582",
+        "fe6d-e87e-ef9e-72f0b977fd66-e5433f8f",
+    ]
+    new_serials = [
+        "9660-7735-5a60-f965eef335b0-170deba4",  # I swear these are from script :3
+        "db90-ff8e-18a7-a94ee6c84e02-5eb905a0",  # I swear these are from script :3
+        "8b92-196e-de9d-3af97a6cd316-4f74c655",  # I swear these are from script :3
+    ]
+
+    # ------ Convert to list of output numbers
+    def convert_serial_to_list_of_outputs(serial: str):
+        serial = serial.replace('-', '')
+        return list(map(lambda x: int(x, 16), serial))
+
+    random_outputs = []
+    for serial in old_serials:
+        random_outputs.extend(
+            convert_serial_to_list_of_outputs(serial)
+        )
+
+    randSolver = RandomSolver()
+    for random_output in random_outputs:
+        randSolver.submit_random_mul_const(random_output, 16)
+    randSolver.solve()
+
+    print(f'[i] {randSolver.n_solutions} potential solutions exists.')
+    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
+    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
+    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
+
+if __name__ == '__main__':
+    # sumbit_random_test()
+    submit_random_mul_const_test()

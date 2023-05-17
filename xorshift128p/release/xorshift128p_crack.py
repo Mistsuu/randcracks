@@ -99,7 +99,7 @@ def vec_to_states(v):
 #  (btw vector S is in vertical form 
 #  incase you're confused)
 #
-def generate_mat_xorshift128():
+def generate_mat_xorshift128p():
     Z64 = zero_matN(64)
     I64 = identity_matN(64)
 
@@ -146,7 +146,7 @@ def generate_mat_xorshift128():
     x = mul_mat128
     return x(M4, x(M3, x(M2, M1)))
 
-xorshift128_mat = generate_mat_xorshift128()
+xorshift128p_mat = generate_mat_xorshift128p()
 
 ####################################################################
 #                              SOLVER
@@ -186,7 +186,7 @@ class RandomGeneratorVariant:
 
 class RandomSolver:
     def __init__(self) -> None:
-        self.M = xorshift128_mat
+        self.M = xorshift128p_mat
         self.T = identity_matN(128)
 
         # Keep track of known bits of the XORShift++128
@@ -258,12 +258,63 @@ class RandomSolver:
         double_bits = f'{int(value * 2**52):052b}' 
         self.submit_state_bits(double_bits, 0, 51)
 
-    def submit_random_mul_const(self, value: float, const: int) -> None:
+    def _submit_random_mul_const_2exp_l(self, value: int, l: int) -> None:
         """
-            Add result of `Math.random() * CONST | 0`.
-            (not done yet...)
+            Add result of `Math.floor(Math.random() * Math.pow(2, l))`.
+            Unsafe because it doesn't check l.
+            You should use submit_random_mul_const() instead.
         """
-        pass
+        if l > 52:
+            value >>= (l-52)
+            l = 52
+
+        leaked_double_bits = f'{value:0{l}b}'
+        self.submit_state_bits(
+            leaked_double_bits, 
+            0, l-1
+        )
+
+    def submit_random_mul_const(self, value: int, N: int) -> None:
+        """
+            Add result of `Math.floor(Math.random() * CONST)`.
+        """
+        # Simple case for powers of 2.        
+        if N >= 2 and N & (N-1) == 0:
+            return self._submit_random_mul_const_2exp_l(
+                      value, int(N).bit_length() - 1
+                   )
+        
+        value = int(value)
+        assert 0 <= value < N, \
+            ValueError(f"Math.floor(Math.random() * {N}) cannot produce output {value}.")
+        assert 1 < N <= 2**52, \
+            ValueError("Not implemented for constants outside the range (1, 2**52] because of possible precision lost.")
+                
+        #
+        # Depending on the value and CONST,
+        # we can leak some of the first few bits
+        # from the states.
+        #
+        # We can do this by noticing that
+        # when values goes from x/CONST to (x+1)/CONST
+        # some bits at the beginning of mantissa
+        # do not change.
+        #
+        lapprox_double_bits = f'{int( value      / N * 2**52)    :052b}'
+        rapprox_double_bits = f'{int((value + 1) / N * 2**52) - 1:052b}'
+        leaked_double_bits = ''
+        for bit_l, bit_r in zip(lapprox_double_bits, rapprox_double_bits):
+            if bit_l != bit_r:
+                break
+            leaked_double_bits += bit_l
+
+        # Sometimes, adding a certain value does not reveal
+        # any known bits of the mantissa.
+        if len(leaked_double_bits) > 0:
+            self.submit_state_bits(leaked_double_bits, 0, len(leaked_double_bits) - 1)
+        else:
+            # print('[i] Warning! No new information is gained when adding this value.')
+            self.skip_random()
 
     # ------------------------ skip_xx() sub-functions -----------------------
     #                      (although there's just skip_random())
@@ -273,13 +324,13 @@ class RandomSolver:
             to a skipped value?
         """
 
-        # Yeah... Just do nothing.
+        # Yeah... For now just do nothing.
         self.update_inner_states()
 
     # --------------------------------  solve():  -------------------------------
     #                             retrieve state array 
 
-    def solve(self, force_redo=False, debug=False) -> None:
+    def solve(self, force_redo=False) -> None:
         # If it's already solved, just don't care 
         # unless we tell them to :)
         if self.answers != None and not force_redo:
@@ -289,7 +340,7 @@ class RandomSolver:
         # submit_random_mul_const() sometimes will 
         # not add any bits to the array...
         assert len(self.known_bits_stack) > 0, \
-            ValueError("Can't solve with an empty stomach man! Please call submit_xx() functions to give me something to gobble :)")
+            ValueError("Can't solve with an empty stomach man! Please call submit_xx() functions to give me something to gobble :) But if you did call submit_random_mul_const(), there might be a chance that your input was not able to leak any state bits... For that I'm truly sorry :(")
         
         # Find answer using some linear algrebra
         # magics.
