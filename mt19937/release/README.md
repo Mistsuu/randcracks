@@ -1,4 +1,4 @@
-# `mt19937_crack`: Cracking Python's `random` module with the power of Z3.
+# `randcracks/mt19937`: Cracking Python's `random` module with the power of Z3.
 
 Cracking Python's `random` module with the power of **Z3**. **This code is heavily inspired from the project of https://github.com/tna0y/Python-random-module-cracker.** Tested with **Python 3.10**.
 

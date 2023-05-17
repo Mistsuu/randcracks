@@ -285,6 +285,14 @@ class RandomSolver:
         if self.answers != None and not force_redo:
             return
         
+        # This could happen during the fact that
+        # submit_random_mul_const() sometimes will 
+        # not add any bits to the array...
+        assert len(self.known_bits_stack) > 0, \
+            ValueError("Can't solve with an empty stomach man! Please call submit_xx() functions to give me something to gobble :)")
+        
+        # Find answer using some linear algrebra
+        # magics.
         self.answers = []
         self.n_solutions = 0
         for start_pos in range(64):
