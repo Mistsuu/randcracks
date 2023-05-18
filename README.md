@@ -11,3 +11,4 @@ If there are some math included, I also want to involve `sagemath` as little as 
 ## Supported algorithms
 1. `mt19937` from `Python`'s `random` module.
 2. `xorshift128+` used by `Node.js`'s `Math.random()`.
+3. `rand()` used by `glibc`.
