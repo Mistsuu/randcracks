@@ -103,6 +103,6 @@ def recover_seed(outputs):
     # Oh probably if it has many Nones.
     assert all(s == None or s < 2147483647 for s in all_states[1:31])
 
-    print(f'[i] Not recovered: {all_states.count(None)}/{len(all_states)}')
+    # print(f'[i] Not recovered: {all_states.count(None)}/{len(all_states)}')
     if all_states[0] != None:
         return all_states[0]
