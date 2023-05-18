@@ -31,4 +31,4 @@ python3 -m pip install -r requirements.txt
 python3 init_cmatrix.py  
 ```
 
-If you're currently on other distros, step `2+` is the same, but step 1, install `gmp` somehow you can **:3**
+If you're currently on other distros, step `2+` is the same, but step 1, install package similar to `libmpc-dev` **:3**
