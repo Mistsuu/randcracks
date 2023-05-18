@@ -16,7 +16,7 @@ def buildCythonModules():
     os.chdir(currentPath)
     
     print("[i] Cython modules are built! Please restart the script to take effect. Sorry for the inconvinience!")
-    exit(-1)
+    exit(0)
 
 try:
     scriptDir = os.path.dirname(os.path.abspath(__file__))

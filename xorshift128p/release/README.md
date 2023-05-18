@@ -20,7 +20,7 @@ This project is based on the work of [v8_rand_buster](https://github.com/d0nutpt
 
 If you're in Ubuntu, run:
 ```
-sudo apt-get install -y libgmp3-dev
+sudo apt-get install -y libmpc-dev
 python3 -m pip install -r requirements.txt
 
 # You can omit this and import 
