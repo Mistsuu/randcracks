@@ -5,9 +5,7 @@ Cracking the following pattern in modern V8 javascript engine.
 Math.floor(CONST * Math.random())
 ```
 
-This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* Also it's inspired by the `fastrology` set of challenges I played in `plaidCTF` recently.
-
-However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. 
+This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. The method is inspired by the `fastrology` challenge set I played in `plaidCTF` recently.
 
 ## Pros ✅ include:
 - `< 1` **second** of solve time *(if you don't stuff too much (like 10000) inputs to the solver)*.
@@ -17,3 +15,14 @@ However, instead of using `z3` module in `Python`, this one utilized the power o
 
 ## Cons ❌ include:
 - `Cython` code might not work on some machines because I still haven't learned anything new from last time. *Maybe I'll plan to add a `xorshift128p_python` branch using pure Python so that it could work on other?*
+
+## Install
+
+If you're in Ubuntu, run:
+```
+sudo apt-get install -y libgmp3-dev
+python3 -m pip install -r requirements.txt
+python3 matrix_cython_initializer.py
+```
+
+If you're currently on other distros, install `gmp` somehow you can **:3**
