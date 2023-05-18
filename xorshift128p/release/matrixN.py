@@ -70,7 +70,7 @@ def set_entry_matN(M, x, y, b):
 #                          LINEAR ALGEBRA STUFFS
 # ========================================================================
 
-import matrix_cython_initializer
+import init_cmatrix
 from cmatrixN import (
     rref, 
     find_pivot, 

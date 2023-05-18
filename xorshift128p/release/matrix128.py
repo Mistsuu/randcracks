@@ -18,7 +18,7 @@ def combine_4_mat64(
 #                             CYTHON'S CODE
 # ========================================================================
 
-import matrix_cython_initializer
+import init_cmatrix
 from cmatrix128 import (
     add_mat128, 
     mul_mat128

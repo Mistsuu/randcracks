@@ -22,7 +22,13 @@ If you're in Ubuntu, run:
 ```
 sudo apt-get install -y libgmp3-dev
 python3 -m pip install -r requirements.txt
-python3 matrix_cython_initializer.py
+
+# You can omit this and import 
+# xorshift12p_crack directly to 
+# compile Cython's files, however
+# the script will exit after it
+# finished compiling.
+python3 init_cmatrix.py  
 ```
 
-If you're currently on other distros, install `gmp` somehow you can **:3**
+If you're currently on other distros, step `2+` is the same, but step 1, install `gmp` somehow you can **:3**

@@ -9,7 +9,7 @@
 #                             CYTHON'S CODE
 # ========================================================================
 
-import matrix_cython_initializer
+import init_cmatrix
 from cmatrix64 import (
     add_mat64, 
     mul_mat64
