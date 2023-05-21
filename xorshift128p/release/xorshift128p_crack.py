@@ -184,6 +184,34 @@ class RandomGeneratorVariant:
     def random(self):
         raise ValueError(f"This is not a RandomGenerator object. This is RandomGeneratorVariant, which generates variants of RandomGenerator based on the solutions of RandomSolver. To access a RandomGenerator object, use [] operator. The argument should be in the range of [0, {self.n_variants}).")
 
+class RandomGeneratorVariantList:
+    def __init__(self) -> None:
+        self.__variants_list__ = []
+        self.__size__ = 0
+        self.__start__ = 0
+
+    def append(self, item: RandomGeneratorVariant) -> None:
+        self.__variants_list__.append(item)
+        self.__size__ += item.n_variants
+
+    def __getitem__(self, index: int) -> RandomGenerator:
+        assert 0 <= index < self.__len__(), \
+            ValueError(f"index should be in [0, {self.__len__()}) only.")
+        
+        index += self.__start__
+        for variant in self.__variants_list__:
+            if index >= variant.n_variants:
+                index -= variant.n_variants
+                continue
+            return variant[index]
+        
+    def __iter__(self):
+        for i in range(self.__size__):
+            yield self.__getitem__(i)
+
+    def __len__(self):
+        return max(self.__size__ - self.__start__, 0)
+
 class RandomSolver:
     def __init__(self) -> None:
         self.M = xorshift128p_mat
@@ -197,7 +225,6 @@ class RandomSolver:
         self.current_pos = [63-i for i in range(64)]
         self.forward_pos = [i    for i in range(64)]
         self.answers     = None
-        self.n_solutions = 0
 
         # Cache for every value of M^x
         self.cache_pow_M = []
@@ -344,8 +371,7 @@ class RandomSolver:
         
         # Find answer using some linear algrebra
         # magics.
-        self.answers = []
-        self.n_solutions = 0
+        self.answers = RandomGeneratorVariantList()
         for start_pos in range(64):
             # Solve original state vectors
             v = bitstring_to_vecN(self.known_bits_stack)
@@ -360,23 +386,16 @@ class RandomSolver:
 
             # Update number of solutions
             if w != None:
-                self.n_solutions += 2**len(K)
-
                 # Create object holding potential
                 # variants of the solutions
                 # (not generate all of it in an array
                 # because n_solutions scale with O(2^N))
-                if len(K) > 0:
-                    self.answers.append(
-                        RandomGeneratorVariant(w, K, self.forward_pos[start_pos])
-                    )
-                else:
-                    self.answers.append(
-                        RandomGeneratorVariant(w, K, self.forward_pos[start_pos])[0]
-                    )
+                self.answers.append(
+                    RandomGeneratorVariant(w, K, self.forward_pos[start_pos])
+                )
 
         # Almost forgot to let user know
         # that the solution might not be possible...
-        if self.n_solutions == 0:
+        if len(self.answers) == 0:
             self.answers = None
             raise ValueError("Can't solve this shift!")
