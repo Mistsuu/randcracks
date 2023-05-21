@@ -32,3 +32,53 @@ python3 init_cmatrix.py
 ```
 
 If you're currently on other distros, step `2+` is the same, but step 1, install package similar to `libmpc-dev` **:3**
+
+## Usages
+
+### Object creation
+First, you create the `RandomSolver()` object.
+```py
+randSolver = RandomSolver()
+```
+
+### Submit/Skip outputs
+Afterwards, you can feed different types of outputs to the solver. This includes two types of outputs:
+1. `Math.random()` by using:
+```py
+randSolver.submit_random(x) 
+```
+
+2. `Math.floor(CONST * Math.random())` where `CONST` is an integer in the range `[2, 2**52]` by using:
+```py
+randSolver.submit_random_mul_const(x, CONST)
+```
+
+You can also skip an output if you don't know what's the value is:
+```py
+randSolver.skip_random()
+```
+
+### Solve
+Then, you just need to call:
+```py
+randSolver.solve()
+```
+
+to get the result. When you're finished, you can access `randSolver.answers` to get `RandomGenerator` objects. *(if your inputs are not enough, there might be multiple solutions)*
+
+Those objects are created during accessing the `[]` operator of the `randSolver.answers` object, so no need to worry about memory usages too much. You can use `randSolver.n_solutions` to get the total numbers of possible `RandomGenerator` objects given your inputs to the solver.
+
+### Generate new outputs
+You can do it by using the returned `RandomGenerator` object:
+
+```py
+generator = randSolver.answers[0]
+print(generator.random())       # Simulates the next Math.random() outputs
+print(generator.random())       
+print(generator.random())
+print(generator.random())
+print(generator.random())
+```
+
+### Examples
+You can find some of the examples from `xorshift128p_examples.py` file.
