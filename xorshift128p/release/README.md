@@ -24,7 +24,7 @@ If you're in Ubuntu, just run:
 python3 -m pip install -r requirements.txt
 ```
 
-## Usage
+## Usages
 
 ### Object creation
 First, you create the `RandomSolver()` object.
@@ -54,6 +54,25 @@ Then, you just need to call:
 ```py
 randSolver.solve()
 ```
+
+to get the result. When you're finished, you can access `randSolver.answers` to get `RandomGenerator` objects. *(if your inputs are not enough, there might be multiple solutions)*
+
+Those objects are created during accessing the `[]` operator of the `randSolver.answers` object, so no need to worry about memory usages too much. You can use `randSolver.n_solutions` to get the total numbers of possible `RandomGenerator` objects given your inputs to the solver.
+
+### Generate new outputs
+You can do it by using the returned `RandomGenerator` object:
+
+```py
+generator = randSolver.answers[0]
+print(generator.random())       # Simulates the next Math.random() outputs
+print(generator.random())       
+print(generator.random())
+print(generator.random())
+print(generator.random())
+```
+
+### Examples
+You can find some of the examples from `xorshift128p_examples.py` file.
 
 to get the result. When you're finished, you can access `randSolver.answers` to get `RandomGenerator` objects. *(if your inputs are not enough, there might be multiple solutions)*
 
