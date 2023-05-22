@@ -84,5 +84,11 @@ print(generator.random())
 print(generator.random())
 ```
 
+You can also iterate through the `randSolver.answers` object like this:
+```py
+for answer in randSolver.answers:
+    print(answer.random())
+```
+
 ### Examples
 You can find some of the examples from `xorshift128p_examples.py` file.
