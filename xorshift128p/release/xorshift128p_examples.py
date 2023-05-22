@@ -9,8 +9,8 @@ def sumbit_random_test():
     randSolver.submit_random(0.4275409415243707)
 
     randSolver.solve()
-    print(f'[i] {randSolver.n_solutions} potential solutions exists.')
-    for i in range(randSolver.n_solutions):
+    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
+    for i in range(len(randSolver.answers)):
         JSRand = randSolver.answers[i]
         print(JSRand.random())
         print(JSRand.random())
@@ -81,7 +81,7 @@ def submit_random_mul_const_test():
         randSolver.submit_random_mul_const(random_output, 14)
     randSolver.solve()
 
-    print(f'[i] {randSolver.n_solutions} potential solutions exists.')
+    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
     print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
     print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
 
@@ -132,21 +132,14 @@ def submit_random_mul_const_test_underdetermined_system():
         randSolver.submit_random_mul_const(random_output, 16)
     randSolver.solve()
 
-    print(f'[i] {randSolver.n_solutions} potential solutions exists.')
+    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
     correct_answer = None
     for answer in randSolver.answers:
         # We run through all solutions to arrive
         # at the correct solution.
-        if type(answer) == RandomGeneratorVariant:
-            for i in range(answer.n_variants):
-                next_serial = generate_new_serial(answer[i].random)
-                if next_serial == new_serials[0]:
-                    correct_answer = answer[i]
-                    break
-        else:
-            next_serial = generate_new_serial(answer.random)
-            if next_serial == new_serials[0]:
-                correct_answer = answer
+        next_serial = generate_new_serial(answer.random)
+        if next_serial == new_serials[0]:
+            correct_answer = answer
 
         # Of course, we can submit all,
         # But we're assuming that we only
@@ -161,6 +154,6 @@ def submit_random_mul_const_test_underdetermined_system():
     print(f' L predict next serial:', generate_new_serial(correct_answer.random))
 
 if __name__ == '__main__':
-    # sumbit_random_test()
-    submit_random_mul_const_test()
+    sumbit_random_test()
+    # submit_random_mul_const_test()
     # submit_random_mul_const_test_underdetermined_system()

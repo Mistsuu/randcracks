@@ -72,9 +72,8 @@ def set_entry_matN(M, x, y, b):
 
 def find_pivot(row, ncols):
     for i_col in range(ncols):
-        if gmpy2.bit_test(row, 0):
+        if gmpy2.bit_test(row, i_col):
             return i_col
-        row >>= 1
     return -1
 
 def rref(M, nrows, ncols):
@@ -115,8 +114,8 @@ def solve_right(M, v, nrows, ncols):
 
     # Create augmented matrix R = [M | v] 
     for i_row in range(nrows):
-        R[i_row] |= ((v & 0x1) << ncols)
-        v >>= 1
+        if gmpy2.bit_test(v, i_row):
+            R[i_row] = gmpy2.bit_set(R[i_row], ncols)
 
     # RRef the shit out of R
     R = rref(R, nrows, ncols+1)
@@ -124,8 +123,8 @@ def solve_right(M, v, nrows, ncols):
     # Check if answer is actually solvable
     # if the system is over-determined?
     for i_row in range(ncols, nrows):
-        assert R[i_row] == 0, \
-            ValueError("This equation cannot be solved!")
+        if R[i_row] != 0:
+            return None
 
     # Get answer.
     x = gmpy2.mpz(0)
@@ -138,7 +137,7 @@ def solve_right(M, v, nrows, ncols):
     return x
 
 def transpose(M, nrows, ncols):
-    R = [gmpy2.mpz(0)] * ncols
+    R = [gmpy2.mpz(0) for i in range(ncols)]
     for i_row in range(nrows):
         for i_col in range(ncols):
             if gmpy2.bit_test(M[i_row], i_col):
@@ -159,7 +158,7 @@ def kernel_right(M, nrows, ncols):
     # Get the left side of the augmented matrix
     K = []
     for i_row in range(ncols):
-        row_augR, row_augL = gmpy2.f_divmod_2exp(MT[i_row], nrows)
+        row_augR, row_augL = gmpy2.t_divmod_2exp(MT[i_row], nrows)
         if row_augL == 0 and row_augR != 0:
             K.append(row_augR)
 
@@ -170,6 +169,8 @@ if __name__ == '__main__':
     M = rand_matN(128)
     debug_matN(M, 128)
 
-    N = kernel_right(M, 128, 128)
-    for i in range(len(N)):
-        debug_vecN(N[i], 128)
+    v = gmpy2.mpz(random.getrandbits(128))
+    debug_vecN(v, 128)
+
+    x = solve_right(M, v, 128, 128)
+    debug_vecN(x, 128)
