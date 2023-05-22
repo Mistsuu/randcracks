@@ -10,10 +10,9 @@ def sumbit_random_test():
 
     randSolver.solve()
     print(f'[i] {len(randSolver.answers)} potential solutions exists.')
-    for i in range(len(randSolver.answers)):
-        JSRand = randSolver.answers[i]
-        print(JSRand.random())
-        print(JSRand.random())
+    for answer in randSolver.answers:
+        print(answer.random())
+        print(answer.random())
         print('--------')
 
     """

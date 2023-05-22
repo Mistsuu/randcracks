@@ -71,21 +71,13 @@ print(generator.random())
 print(generator.random())
 ```
 
-### Examples
-You can find some of the examples from `xorshift128p_examples.py` file.
-
 to get the result. When you're finished, you can access `randSolver.answers` to get `RandomGenerator` objects. *(if your inputs are not enough, there might be multiple solutions)*
 
-Those objects are created during accessing the `[]` operator of the `randSolver.answers` object, so no need to worry about memory usages too much. You can use `len(randSolver.answers)` to get the total numbers of possible `RandomGenerator` objects given your inputs to the solver.
-
-### Generate new outputs
-You can do it by using the returned `RandomGenerator` object:
-
+Those objects are created during accessing the `[]` operator of the `randSolver.answers` object, so no need to worry about memory usages too much. You can use `len(randSolver.answers)` to get the total numbers of possible `RandomGenerator` objects given your inputs to the solver. Alternatively, you can also iterate through the `randSolver.answers` object like this:
 ```py
-generator = randSolver.answers[0]
-print(generator.random())       # Simulates the next Math.random() outputs
-print(generator.random())       
-print(generator.random())
-print(generator.random())
-print(generator.random())
+for answer in randSolver.answers:
+    print(answer.random())
 ```
+
+### Examples
+You can find some of the examples from `xorshift128p_examples.py` file.
