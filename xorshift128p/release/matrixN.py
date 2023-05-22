@@ -164,13 +164,3 @@ def kernel_right(M, nrows, ncols):
 
     # Return unique
     return list(dict.fromkeys(K))
-
-if __name__ == '__main__':
-    M = rand_matN(128)
-    debug_matN(M, 128)
-
-    v = gmpy2.mpz(random.getrandbits(128))
-    debug_vecN(v, 128)
-
-    x = solve_right(M, v, 128, 128)
-    debug_vecN(x, 128)

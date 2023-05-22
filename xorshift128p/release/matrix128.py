@@ -38,13 +38,3 @@ def combine_4_mat64(
     for i_row in range(64):
         R.append((M11[i_row] << 64) | M10[i_row])
     return R
-
-if __name__ == '__main__':
-    from matrixN import rand_matN, debug_matN, rref
-
-    M = rand_matN(128)
-    debug_matN(M, 128)
-
-    N = rref(M, 128, 128)
-    debug_matN(N, 128)
-
