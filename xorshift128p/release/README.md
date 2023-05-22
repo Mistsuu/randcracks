@@ -73,7 +73,7 @@ You can do it by using the returned `RandomGenerator` object:
 
 ```py
 # Get the number of solutions
-print(f'[i] There are {len(randSolver.answers)} potentital solutions.')
+print(f'[i] There are {len(randSolver.answers)} potential solutions.')
 
 # Get output from one of the solutions
 generator = randSolver.answers[0]
