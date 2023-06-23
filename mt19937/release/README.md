@@ -24,13 +24,14 @@ randomSolver.solve()
 Between the creation of a `RandomSolver` object and the call to `RandomSolver.solve()` are the calls to the:
 
 - **feed functions:** Ones that starts with `submit_`.
-
 - **skip functions:** Ones that starts with `skips_`.
 - **seed-finding initialization function**: `init_seed_finder`.
 
 After the `RandomSolver.solve()` call, we can predict newer values by calling functions that we normally call in `random`, like `RandomSolver.random()`, or `RandomSolver.getrandbits(nbits)`, etc, the list of which can be found in the **Predict newer values** section. You can also choose NOT to call `RandomSolver.solve()` and call those functions instead, and the cracker will be able to detect and figure out the inner states before churning out any new outputs.
 
 You can feed new outputs even after solved, and call `RandomSolver.solve(force_redo=True)` to force the cracker to re-solve the inner states.
+
+You may also specify the endianess of the machine you're trying to crack using `RandomSolver(machine_byteorder="big")` or `RandomSolver(machine_byteorder="little")`. However, this mechanism is not tested yet in big-endian, only derived through code observations, so errors may occurs.
 
 ### Feeding outputs of `random.xxx()`
 

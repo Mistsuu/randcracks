@@ -73,7 +73,10 @@ def z3_init_by_array(key_length: int):
 #                              SOLVER
 ####################################################################
 class RandomSolver():
-    def __init__(self) -> None:
+    def __init__(self, machine_byteorder="little") -> None:
+        assert machine_byteorder == "big" or machine_byteorder == "little", \
+            ValueError("machine_byteorder option can only be \"big\" or \"little\".")
+
         self.solver_constrants = []
         self.key_variables = []
         self.variables = {}
@@ -83,6 +86,7 @@ class RandomSolver():
         self.answer = None
 
         self.started_finding_seed = False
+        self.machine_byteorder = machine_byteorder
 
     def init_seed_finder(self, seed_nbits: int) -> None:
         assert not self.started_finding_seed, \
@@ -448,7 +452,7 @@ class RandomSolver():
         # Get key in it's unsigned-char form.
         key = b''
         for key_variable in self.key_variables:
-            key += self.answer[key_variable].as_long().to_bytes(4, 'little') # note: if machine is big-endian, we need to put this to 'big'
+            key += self.answer[key_variable].as_long().to_bytes(4, self.machine_byteorder)
         return int.from_bytes(key, 'little')
     
     def get_skipped_variable_answer(self, variable: BitVecRef | FPRef) -> int | float:
