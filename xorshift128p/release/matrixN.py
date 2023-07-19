@@ -144,7 +144,7 @@ def transpose(M, nrows, ncols):
                 R[i_col] = gmpy2.bit_set(R[i_col], i_row)
     return R
 
-def kernel_right(M, nrows, ncols):
+def kernel_right_basis(M, nrows, ncols):
     # Compute tranpose matrix M.T
     MT = transpose(M, nrows, ncols)
 

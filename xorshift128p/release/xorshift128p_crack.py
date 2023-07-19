@@ -3,7 +3,7 @@ import struct
 
 from matrixN import (
     identity_matN, zero_matN, set_entry_matN, bitstring_to_vecN, 
-    solve_right, kernel_right
+    solve_right, kernel_right_basis
 )
 from matrix64 import add_mat64, mul_mat64
 from matrix128 import add_mat128, mul_mat128, combine_4_mat64
@@ -379,7 +379,7 @@ class RandomSolver:
                 self.S[start_pos], v,
                 len(self.S[start_pos]), 128
             )
-            K = kernel_right(
+            K = kernel_right_basis(
                 self.S[start_pos],
                 len(self.S[start_pos]), 128
             )
