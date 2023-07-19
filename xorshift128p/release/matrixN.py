@@ -76,5 +76,5 @@ from cmatrixN import (
     find_pivot, 
     solve_right,
     transpose,
-    kernel_right
+    kernel_right_basis
 )

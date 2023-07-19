@@ -185,7 +185,7 @@ def transpose(M, nrows, ncols):
     # Return
     return R
 
-def kernel_right(M, nrows, ncols):
+def kernel_right_basis(M, nrows, ncols):
     cdef int C_nrows = nrows
     cdef int C_ncols = ncols
 
