@@ -104,7 +104,23 @@ def test_skipping_outputs():
             skipInfo["actual"],
         )
 
+def test_shuffle():
+    randomSolver = RandomSolver()
+    for _ in range(624):
+        randomSolver.submit_getrandbits32(random.getrandbits(32))
+
+    for i in range(20):
+        arr1 = list(range(20))
+        arr2 = list(range(20))
+        random.shuffle(arr1, random=random.random)
+        randomSolver.shuffle(arr2, random=randomSolver.random)
+
+        print(f'[i] Shuffle test {i}...')
+        print(f' L arr1 = {arr1}')
+        print(f' L arr2 = {arr2}')
+
 if __name__ == '__main__':
     # test_recover_seed()
-    test_skipping_outputs()
+    # test_skipping_outputs()
+    test_shuffle()
     pass
