@@ -541,3 +541,21 @@ class RandomSolver():
     
     def randrange(self, start: int, stop: int) -> int:
         return self.randbelow(stop - start) + start
+    
+
+    # =============================== SEQUENCE METHODS ===============================
+
+    def choice(self, seq: list):
+        return seq[self.randbelow(len(seq))]
+
+    def shuffle(self, x: list, random=None) -> None:
+        if random is None:
+            randbelow = self.randbelow
+            for i in reversed(range(1, len(x))):
+                j = randbelow(i + 1)
+                x[i], x[j] = x[j], x[i]
+
+        else:
+            for i in reversed(range(1, len(x))):
+                j = math.floor(random() * (i + 1))
+                x[i], x[j] = x[j], x[i]
