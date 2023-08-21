@@ -14,7 +14,7 @@ This project is based on the work of [v8_rand_buster](https://github.com/d0nutpt
 - No `sagemath` required.
 
 ## Cons ❌ include:
-- `Cython` code might not work on some machines because I still haven't learned anything new from last time. *Maybe I'll plan to add a `xorshift128p_python` branch using pure Python so that it could work on other?*
+- `Cython` code might not work on some machines because I still haven't learned anything new from last time.
 
 ## Install
 
