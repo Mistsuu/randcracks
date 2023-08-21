@@ -1,7 +1,16 @@
 # `randcracks`: Tools to crack random functions.
 
+# Introduction
 This repository will provide tools to crack random algorithm. It is made **100%** for educational purposes only *(and fun **:>**)*. 
 
+# Branches
+There should be two main branches, updated side-by-side: 
+- `release`  
+- `unstable_cython`. 
+  
+The latter uses Cython code to boost speed to some mathematical operations, making it x10 times faster than its Python counterpart on the former branch. But as the name suggests, it is very unstable and may not be able to run on some machines.
+
+# I don't know how to name this section...
 And while there're already many repos that can do this, I also want to create some more relaxed, while systematic way to crack random algorithms, instead of having to transform outputs everytime to suit the other programmer's code **:>** *(but I hope I don't complicated things too much...)*
 
 Some algorithms will be solved using **Python**'s `Z3` module, the others might involve some maths on it... 
@@ -11,4 +20,4 @@ If there are some math included, I also want to involve `sagemath` as little as 
 ## Supported algorithms
 1. `mt19937` from `Python`'s `random` module.
 2. `xorshift128+` used by `Node.js`'s `Math.random()`.
-3. `rand()` used by `glibc`.
+3. `rand()` used by `glibc` (which is not fully supported).
