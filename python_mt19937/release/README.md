@@ -1,4 +1,4 @@
-# `randcracks/mt19937`: Cracking Python's `random` module with the power of Z3.
+# `randcracks/python_mt19937`: Cracking Python's `random` module with the power of Z3.
 
 Cracking Python's `random` module with the power of **Z3**. **This code is heavily inspired from the project of https://github.com/tna0y/Python-random-module-cracker.** Tested with **Python 3.10**.
 
@@ -80,6 +80,14 @@ value = randomSolver.randrange(0, 100) # no skip implementation is in here yet :
 
 # -- or --
 value = randomSolver.randbytes(8)
+
+# -- or --
+array = list(range(10))
+randomSolver.shuffle(array)
+
+# -- or --
+array = list(range(10))
+randomSolver.choice(array)
 ```
 
 ### Seed recovery
