@@ -1,6 +1,51 @@
 import random
+import gmpy2
 from z3 import *
 from z3wrapper import get_z3_answer
+from mathlib.matrix32 import mul_vecl32
+
+####################################################################
+#  FUNCTIONS IN MERSENNE TWISTER MODELED AS MATRIX MULTIPLICATION
+####################################################################
+# The untamper matrix U, that
+# deobfuscate the output into
+# the value in the state array.
+mat_U = [   gmpy2.mpz(270681289),
+            gmpy2.mpz(2),
+            gmpy2.mpz(2165448768),
+            gmpy2.mpz(263304),
+            gmpy2.mpz(16),
+            gmpy2.mpz(67670322),
+            gmpy2.mpz(64),
+            gmpy2.mpz(274877641),
+            gmpy2.mpz(8392962),
+            gmpy2.mpz(2165317636),
+            gmpy2.mpz(33571848),
+            gmpy2.mpz(67405969),
+            gmpy2.mpz(201953586),
+            gmpy2.mpz(8196),
+            gmpy2.mpz(807814344),
+            gmpy2.mpz(1074299152),
+            gmpy2.mpz(2148598304),
+            gmpy2.mpz(2165449284),
+            gmpy2.mpz(270943305),
+            gmpy2.mpz(67666194),
+            gmpy2.mpz(2298684000),
+            gmpy2.mpz(270926024),
+            gmpy2.mpz(4196369),
+            gmpy2.mpz(76054832),
+            gmpy2.mpz(2165318212),
+            gmpy2.mpz(308415681),
+            gmpy2.mpz(75534610),
+            gmpy2.mpz(2299600932),
+            gmpy2.mpz(302138440),
+            gmpy2.mpz(604014609),
+            gmpy2.mpz(1275170866),
+            gmpy2.mpz(2148540932),
+        ]
+
+def mat_untamper(random_output: int):
+    return int(mul_vecl32(gmpy2.mpz(random_output), mat_U))
 
 ####################################################################
 #            FUNCTIONS IN MERSENNE TWISTER MODELED IN Z3
@@ -173,7 +218,7 @@ class RandomSolver():
 
         # Add constraints
         self.solver_constrants.extend([
-            z3_tamper(z3_state_var) == value
+            z3_state_var == mat_untamper(value)
         ])
 
     def submit_getrandbits(self, value: int, nbits: int) -> None:
