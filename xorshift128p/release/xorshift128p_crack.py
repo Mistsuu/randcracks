@@ -1,15 +1,15 @@
 import gmpy2
 import struct
 
-from matrixN import (
+from mathlib.matrixN import (
     identity_matN, zero_matN, set_entry_matN, bitstring_to_vecN, 
     solve_right, kernel_right_basis
 )
-from matrix64 import add_mat64, mul_mat64
-from matrix128 import add_mat128, mul_mat128, combine_4_mat64
+from mathlib.matrix64 import add_mat64, mul_mat64
+from mathlib.matrix128 import add_mat128, mul_mat128, combine_4_mat64
 
 # Debug imports
-from matrixN import debug_matN, debug_vecN
+from mathlib.matrixN import debug_matN, debug_vecN
 
 ####################################################################
 #                          DEFAULT GENERATOR
