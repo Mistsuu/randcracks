@@ -119,8 +119,17 @@ def test_shuffle():
         print(f' L arr1 = {arr1}')
         print(f' L arr2 = {arr2}')
 
+def test_simple_solve():
+    randomSolver = RandomSolver()
+    randomSolver.submit_getrandbits(random.getrandbits(32 * 624), 32 * 624)
+    randomSolver.solve()
+
+    for i in range(200):
+        assert randomSolver.getrandbits32() == random.getrandbits(32)
+
 if __name__ == '__main__':
     # test_recover_seed()
     # test_skipping_outputs()
-    test_shuffle()
+    # test_shuffle()
+    test_simple_solve()
     pass
