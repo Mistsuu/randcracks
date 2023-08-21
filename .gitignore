@@ -8,6 +8,8 @@ misc
 
 # Built binaries should
 # not be here :)
-*mathlib/cython/lib/
-*mathlib/cython/tmp/
-*mathlib/cython/*.c
+/*/mathlib/cython/lib/
+/*/mathlib/cython/tmp/
+/*/mathlib/cython/*.c
+
+xorshift128
