@@ -6,7 +6,8 @@ misc
 */misc
 */.old
 
-# Custom for XORShift128+
-xorshift128p/release/cython/*.c
-xorshift128p/release/cython/lib
-xorshift128p/release/cython/tmp
+# Built binaries should
+# not be here :)
+*/mathlib/cython/*.c
+*/mathlib/cython/lib
+*/mathlib/cython/tmp
