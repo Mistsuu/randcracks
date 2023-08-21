@@ -1,5 +1,7 @@
 import gmpy2
 import random
+import os
+import sys
 from copy import deepcopy
 
 """
@@ -69,6 +71,9 @@ def set_entry_matN(M, x, y, b):
 # ========================================================================
 #                          LINEAR ALGEBRA STUFFS
 # ========================================================================
+
+scriptDir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(scriptDir)
 
 import init_cmatrix
 from cmatrixN import (

@@ -1,3 +1,6 @@
+import os
+import sys
+
 """
     Matrices here are represented as
     lists of gmpy2.mpz(x)s.
@@ -17,6 +20,9 @@ def combine_4_mat64(
 # ========================================================================
 #                             CYTHON'S CODE
 # ========================================================================
+
+scriptDir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(scriptDir)
 
 import init_cmatrix
 from cmatrix128 import (
