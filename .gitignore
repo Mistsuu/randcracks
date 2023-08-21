@@ -6,6 +6,7 @@ misc
 */misc
 */.old
 
-*/mathlib/cython/lib/
-*/mathlib/cython/tmp/
-*/mathlib/cython/*.c
+#### fix here 
+**/mathlib/cython/*.c
+**/mathlib/cython/lib
+**/mathlib/cython/tmp
