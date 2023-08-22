@@ -104,6 +104,7 @@ def test_skipping_outputs():
         )
 
 def test_shuffle():
+    print("============================ SHUFFLE TEST ============================")
     randomSolver = RandomSolver()
     for _ in range(624):
         randomSolver.submit_getrandbits32(random.getrandbits(32))
@@ -119,6 +120,7 @@ def test_shuffle():
         print(f' L arr2 = {arr2}')
 
 def test_simple_solve_v1():
+    print("============================ SIMPLE TEST V1 ============================")
     randomSolver = RandomSolver()
     randomSolver.submit_getrandbits(random.getrandbits(32 * 624), 32 * 624)
     randomSolver.solve()
@@ -127,6 +129,7 @@ def test_simple_solve_v1():
         assert randomSolver.getrandbits32() == random.getrandbits(32)
 
 def test_simple_solve_v2():
+    print("============================ SIMPLE TEST V2 ============================")
     randomSolver = RandomSolver()
     for _ in range(624):
         randomSolver.submit_random(random.random())
@@ -136,8 +139,8 @@ def test_simple_solve_v2():
         assert randomSolver.getrandbits32() == random.getrandbits(32)
 
 if __name__ == '__main__':
-    # test_recover_seed()
-    test_skipping_outputs()
+    test_recover_seed()
+    # test_skipping_outputs()
     # test_shuffle()
 
     # test_simple_solve_v1()
