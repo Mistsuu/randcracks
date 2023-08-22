@@ -112,8 +112,6 @@ def z3_init_by_array(key_length: int):
             i = 1
 
     z3_mt[0] = BitVecVal(0x80000000, 32)
-    for i in range(n):
-        z3_mt[i] = simplify(z3_mt[i])
     return z3_mt, z3_init_key
 
 
