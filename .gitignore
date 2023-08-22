@@ -2,9 +2,6 @@
 __pycache__
 misc
 .old
-*/__pycache__
-*/misc
-*/.old
 
 #### fix here 
 **/mathlib/cython/*.c
