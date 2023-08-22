@@ -37,8 +37,8 @@ def mul_vecl32(v, M):
     """
     v = deepcopy(v)
     r = gmpy2.mpz(0)
-    for i_col in range(32):
+    for i_row in range(32):
         if gmpy2.bit_test(v, 0):
-            r ^= M[i_col]
+            r ^= M[i_row]
         v >>= 1
     return r
