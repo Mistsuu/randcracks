@@ -71,5 +71,26 @@ def mul_mat32(M, N):
 
 def mul_vecl32(v, M):
     """
-        mul_vecl32(): Multiply 
+        mul_vecl32(): Multiply a vector v of 32 items
+                      with a 32x32 matrix M (v*M)
     """
+    cdef mpz_t C_r
+    cdef mpz_t C_v
+    C_v = MPZ(v)
+    mpz_init_set_ui(C_r, 0)
+    
+    for i_row in range(32):
+        if mpz_tstbit(C_v, i_row):
+            mpz_xor(
+                C_r, 
+                C_r,
+                MPZ(M[i_row])
+            )
+
+    r = GMPy_MPZ_From_mpz(C_r)
+
+    # Cleanup
+    mpz_clear(C_r)
+
+    # Return
+    return r
