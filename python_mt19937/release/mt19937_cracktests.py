@@ -41,7 +41,7 @@ def test_skipping_outputs():
 
     # Solve for outputs
     randomSolver = RandomSolver()
-    for _ in range(624 * 2):
+    for _ in range(624 * 3):
         randomSolver.submit_getrandbits32(random.getrandbits(32))
 
         # Choosing from another source :)
@@ -87,15 +87,14 @@ def test_skipping_outputs():
             guesser_output = randomSolver.get_skipped_variable_answer(guesser_val)
 
         if "random.randbytes" in type:
-            guesser_output = bytes(
-                [randomSolver.get_skipped_variable_answer(val) for val in guesser_val]
-            ).hex()
+            guesser_output = bytes(randomSolver.get_skipped_variable_answer(guesser_val)).hex()
             lib_output = lib_output.hex()
 
         print(f"[i] {type}:")
         print(f" L--- Guess: {guesser_output}")
         print(f" L--- Lib's: {lib_output}")
         print()
+        assert guesser_output == lib_output
 
     for skipInfo in skipInfos:
         format_output_test(
@@ -138,10 +137,10 @@ def test_simple_solve_v2():
 
 if __name__ == '__main__':
     # test_recover_seed()
-    # test_skipping_outputs()
+    test_skipping_outputs()
     # test_shuffle()
 
     # test_simple_solve_v1()
-    test_simple_solve_v2()
+    # test_simple_solve_v2()
     
     pass

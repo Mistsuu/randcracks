@@ -2,6 +2,7 @@ import random
 import gmpy2
 from z3 import *
 from z3wrapper import get_z3_answer
+from typing import Generator, Iterable
 
 # Custom library calls.
 from mathlib.matrix32 import mul_vecl32
@@ -158,7 +159,7 @@ class RandomSolver():
 
     # =============================== SOLVERS ===============================
 
-    def gen_state_lvars(self, n_vars: int):
+    def gen_state_lvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
         assert not self.started_finding_seed, \
             ValueError("Cannot add values to the left if the solver is already in the state of finding seed!")
 
@@ -183,7 +184,7 @@ class RandomSolver():
         for j in range(-n_vars + 1, 1):
             yield self.variables[i+j]
 
-    def gen_state_rvars(self, n_vars: int):
+    def gen_state_rvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
         i = self.rindex
         for j in range(n_vars):
             self.variables[i+j] = BitVec(f'state_{i+j}', 32)
@@ -278,7 +279,7 @@ class RandomSolver():
             LShR(z3_tamper(z3_state_var1), 6) == tampered1,
         ])
 
-    def submit_randbelow(self, value: int, n: int, nskips: int = 0) -> list:
+    def submit_randbelow(self, value: int, n: int, nskips: int = 0) -> None:
         """
             Submit an output of `value = random.random()` to the solver.
 
@@ -296,7 +297,7 @@ class RandomSolver():
             )
         self.submit_getrandbits(value, k)
 
-    def submit_randrange(self, value: int, start: int, stop: int, nskips: int = 0) -> list:
+    def submit_randrange(self, value: int, start: int, stop: int, nskips: int = 0) -> None:
         """
             Submit an output of `value = random.randrange(start, stop)` to the solver.
 
@@ -318,7 +319,7 @@ class RandomSolver():
     #       (but only works if we know the exact number of missing values)
     #                   ( so please use it with care :> )
     #
-    def skip_getrandbits32(self) -> list:
+    def skip_getrandbits32(self) -> list[BitVecRef, BitVecRef]:
         """
             Skips a `random.getrandbits(32)` call in the process.
 
@@ -332,20 +333,15 @@ class RandomSolver():
             onto `z3_state_var` or `z3_output_var`, or get a result
             from it after solved.
         """
-        # Create variables for output
-        z3_output_var = BitVec(f'value_getrandbits32_{self.rindex}', 32)
-        
         # Create state variables
         z3_state_var, = list(self.gen_state_rvars(1))
 
-        # Add constraints
-        self.solver_constrants.append(
-            z3_tamper(z3_state_var) == z3_output_var
-        )
+        # Create output reference variable
+        z3_output_var = z3_tamper(z3_state_var)
 
         return z3_state_var, z3_output_var
 
-    def skip_getrandbits(self, nbits: int) -> list:
+    def skip_getrandbits(self, nbits: int) -> list[list[BitVecRef], BitVecRef]:
         """
             Skips a `random.getrandbits(nbits)` call in the process.
 
@@ -359,9 +355,6 @@ class RandomSolver():
             onto `z3_state_vars` or `z3_output_var`, or get a result from it after
             solved.
         """
-        # Create variables for output
-        z3_output_var = BitVec(f'value_getrandbits{nbits}_{self.rindex}', nbits)
-        
         # List of states variables
         z3_state_vars = []
         z3_output_pieces = []
@@ -387,17 +380,15 @@ class RandomSolver():
             z3_state_vars.append(z3_state_var)
             z3_output_pieces.append(z3_output_getrandbits32)
 
-        # Add constraints
-        self.solver_constrants.append(
-            z3_output_var == Concat(*z3_output_pieces[::-1])
-                if len(z3_output_pieces) > 1
-                else
-            z3_output_var == z3_output_pieces[0]
-        )
+        # Create output reference variable
+        if len(z3_output_pieces) > 1:
+            z3_output_var = Concat(*z3_output_pieces[::-1])
+        else:
+            z3_output_var = z3_output_pieces[0]
 
         return z3_state_vars, z3_output_var
 
-    def skip_randbytes(self, nbytes: int) -> list:
+    def skip_randbytes(self, nbytes: int) -> list[list[BitVecRef], list[BitVecRef]]:
         """
             Skips a `random.randbytes(nbytes)` call in the process.
 
@@ -412,25 +403,23 @@ class RandomSolver():
             onto `z3_state_vars` or `z3_output_vars`, or get a result from it after
             solved.
         """
-        # Create variables for output
-        z3_output_vars = [BitVec(f'value_randbyte{i}_{self.rindex}', 8) for i in range(nbytes)]
-        
         # Just reuse skip_getrandbits() 
         z3_state_vars, z3_output_getrandbits = self.skip_getrandbits(
             nbytes * 8
         )
 
-        # Add constraints
-        self.solver_constrants.append(
-            Concat(*z3_output_vars[::-1]) == z3_output_getrandbits
-                if len(z3_output_vars) > 1
-                else 
-            z3_output_vars[0] == z3_output_getrandbits
-        )
+        # Create output reference variable
+        z3_output_vars = []
+        for i in range(nbytes):
+            z3_output_vars.append(Extract(
+                                    (i+1)*8 - 1, 
+                                     i   *8, 
+                                    z3_output_getrandbits
+                                 ))
 
         return z3_state_vars, z3_output_vars
 
-    def skip_random(self) -> list:
+    def skip_random(self) -> list[list[BitVecRef], FPRef]:
         """
             Skips a `random.random()` call in the process.
 
@@ -451,26 +440,26 @@ class RandomSolver():
 
         # Create variables
         z3_state_var0, z3_state_var1 = list(self.gen_state_rvars(2))
+
+        # Create output reference variable
         tampered0 = LShR(z3_tamper(z3_state_var0), 5)
         tampered1 = LShR(z3_tamper(z3_state_var1), 6)
-
-        # Add constraint
-        self.solver_constrants.extend([
-            Extract(25, 0, tampered0) == Extract(51, 26, z3_out_bitvec), # first-half of mantissa
-            Extract(25, 0, tampered1) == Extract(25, 0,  z3_out_bitvec), # last-half of mantissa
-            Extract(63, 52, z3_out_bitvec) == 1022,                      # sign_bit = 0 | exponent = 2^(1022-1) = 2^(-1)
-            If(Extract(26, 26, tampered0) == 1,
-               fpBVToFP(z3_out_bitvec, Float64()),
-               fpBVToFP(z3_out_bitvec, Float64()) - 0.5,
-            ) == z3_output_var
-        ])
+        z3_out_bitvec = Concat(
+                            BitVecVal(1022, 12),                    # sign_bit = 0 | exponent = 2^(1022-1) = 2^(-1)
+                            Extract(25, 0, tampered0),              # first-half of mantissa
+                            Extract(25, 0, tampered1)               # last-half of mantissa
+                        )
+        z3_output_var = If(Extract(26, 26, tampered0) == 1,
+                            fpBVToFP(z3_out_bitvec, Float64()),
+                            fpBVToFP(z3_out_bitvec, Float64()) - 0.5,
+                        )
 
         return [z3_state_var0, z3_state_var1], z3_output_var
 
     # --------------------------------  solve():  -------------------------------
     #                     retrieve state array / seed recovering 
         
-    def solve(self, force_redo=False):
+    def solve(self, force_redo=False) -> None:
         # If it's already solved, just don't care 
         # unless we tell them to :)
         if self.answer != None and not force_redo:
@@ -488,7 +477,7 @@ class RandomSolver():
         for _ in range(n):
             self.advance()
 
-    def get_seed(self):
+    def get_seed(self) -> int:
         assert self.started_finding_seed, \
             ValueError("You need to initiate the seed finding process first.")
 
@@ -502,21 +491,21 @@ class RandomSolver():
             key += self.answer[key_variable].as_long().to_bytes(4, self.machine_byteorder)
         return int.from_bytes(key, 'little')
     
-    def get_skipped_variable_answer(self, variable: BitVecRef | FPRef) -> int | float:
+    def get_skipped_variable_answer(self, variable: BitVecRef | FPRef | Iterable) -> int | float | list:
         # Attempt to solve if not solved
         if self.answer == None:
             self.solve()
 
         try:
-            if type(variable) == BitVecRef:
-                return self.answer[variable].as_long()
-            elif type(variable) == FPRef:
+            if isinstance(variable, BitVecRef):
+                return self.answer.evaluate(variable).as_long()
+            elif isinstance(variable, FPRef):
                 # It's always 64-bit value, so
                 # we don't have to worry about
                 # precision here.
-                sign        = self.answer[variable].sign()
-                significand = self.answer[variable].significand_as_long()
-                exponent    = self.answer[variable].exponent_as_long()
+                sign        = self.answer.evaluate(variable).sign()
+                significand = self.answer.evaluate(variable).significand_as_long()
+                exponent    = self.answer.evaluate(variable).exponent_as_long()
                 return (
                     (-1 if sign else 1) 
                             *
@@ -524,6 +513,12 @@ class RandomSolver():
                             *
                     2**(exponent-1023)
                 )
+            elif isinstance(variable, Iterable):
+                # Return as a list :)
+                results = []
+                for _variable in variable:
+                    results.append(self.get_skipped_variable_answer(_variable))
+                return results
         except:
             raise ValueError("This variable does not exist in the constraint system!")
         
@@ -531,7 +526,7 @@ class RandomSolver():
 
     # =============================== GENERATE NEW VALUES ===============================
 
-    def advance(self):
+    def advance(self) -> None:
         if self.answer == None:
             self.solve()
 
@@ -592,7 +587,7 @@ class RandomSolver():
 
     # =============================== SEQUENCE METHODS ===============================
 
-    def choice(self, seq: list):
+    def choice(self, seq: list) -> any:
         return seq[self.randbelow(len(seq))]
 
     def shuffle(self, x: list, random=None) -> None:
