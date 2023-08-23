@@ -47,8 +47,8 @@ mat_U = [   gmpy2.mpz(270681289),
             gmpy2.mpz(2148540932),
         ]
 
-def mat_untamper(random_output: int):
-    return int(mul_vecl32(gmpy2.mpz(random_output), mat_U))
+def mat_untamper(getrandbits32_output: int):
+    return int(mul_vecl32(gmpy2.mpz(getrandbits32_output), mat_U))
 
 ####################################################################
 #            FUNCTIONS IN MERSENNE TWISTER MODELED IN Z3
