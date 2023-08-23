@@ -246,6 +246,88 @@ class RandomSolver():
                 LShR(z3_tamper(z3_state_var), 32 - remaining_bits) == lsb_value
             ])
 
+    def submit_bin_getrandbits(self, binvalue: str) -> BitVecRef:
+        """
+            Submit a bitstring representation of an output `value = random.getrandbits(nbits)` to the solver.
+            It is permitted to put a `'?'` in the middle of the bitstring to represent unknown bits.
+
+            Returns `z3_output_var` where:
+                - `z3_output_var` is the z3 variable represents the output
+                   of `random.getrandbits(nbits)`. 
+                   
+                   This variable is extremely useful when we want to know 
+                   the values of the `'?'` bits in the binary string.
+        """
+        assert all(bit == '0' or bit == '1' or bit == '?' for bit in binvalue), ValueError(f"\"binvalue\" parameter should contains one of these characters only: '0', '1' or '?'.")
+
+        nbits = len(binvalue)
+        z3_output_pieces = []
+
+        for remaining_bits in range(nbits, 0, -32):
+            # Extracting 32-bits from lsb to msb
+            lsb_binvalue = binvalue[-32:]
+            lsb_binvalue_len = min(remaining_bits, 32)
+            binvalue = binvalue[:-32]
+
+            # If all bits are normal, then just submit it like
+            # a normal value.
+            if all(bit == '0' or bit == '1' for bit in lsb_binvalue):
+                lsb_value = int(lsb_binvalue, 2)
+                self.submit_getrandbits(lsb_value, lsb_binvalue_len)
+                z3_output_pieces.append(
+                    BitVecVal(lsb_value, lsb_binvalue_len)
+                )
+                continue
+
+            # Create variables -- for cases where bits < 32
+            z3_state_var, = list(self.gen_state_rvars(1))
+            z3_output_piece = (
+                LShR(z3_tamper(z3_state_var), 32 - remaining_bits)
+                    if remaining_bits < 32
+                    else
+                z3_tamper(z3_state_var)
+            )
+
+            # Add constraints            
+            i = 0
+            while True:
+                # Skip the '?' symbols
+                while i < lsb_binvalue_len and lsb_binvalue[i] == '?':
+                    i += 1
+
+                # Exit if end
+                if i == lsb_binvalue_len:
+                    break
+                
+                # Get non '?' segment of the binary string
+                start_bit_pos = i
+                while i < lsb_binvalue_len and lsb_binvalue[i] != '?':
+                    i += 1
+                end_bit_pos = i-1
+
+                self.solver_constrants.extend([
+                    Extract(
+                        31-start_bit_pos, 
+                        31-end_bit_pos, 
+                        z3_output_piece
+                    ) == int(lsb_binvalue[start_bit_pos:end_bit_pos], 2)
+                ])
+
+                # Exit if end
+                if i == lsb_binvalue_len:
+                    break
+
+            # Add to the collection of output pieces
+            z3_output_pieces.append(z3_output_piece)
+
+        # Create output reference variable
+        if len(z3_output_pieces) > 1:
+            z3_output_var = Concat(*z3_output_pieces[::-1])
+        else:
+            z3_output_var = z3_output_pieces[0]
+
+        return z3_output_var
+
     def submit_randbytes(self, value: bytes) -> None:
         """
             Submit an output of `value = random.randbytes(nbytes)` to the solver.

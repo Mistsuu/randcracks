@@ -42,6 +42,7 @@ Using `RandomSolver.submit_xxx()` function, where the `xxx` suffix corresponds t
 - `RandomSolver.submit_getrandbits(self, value: int, nbits: int)`
 - `RandomSolver.submit_randbelow(self, value: int, nskips: int = 0)`
 - `RandomSolver.submit_randrange(self, value: int, start: int, stop: int, nskips: int = 0)`
+- `RandomSolver.submit_bin_getrandbits(self, binvalue: str)`
 
 Since some functions calls an unpredictable amount of `random.getrandbits(nbits)` at their core, an `nskips` option is put so that we can specify if we know for sure how many `getrandbits` it could have called.
 
@@ -61,6 +62,12 @@ randomSolver.submit_random(random.random())
 # (uses ONLY when you know exactly how many 
 # random.getrandbits() have been used)
 randomSolver.submit_randrange(69, 0, 100, nskips=3)
+
+# -- or --
+# This function returns a BitVecRef so you can use
+# randomSolver.get_skipped_variable_answer(z3_output_var)
+# to find out the missing '?' bits.
+z3_output_var = randomSolver.submit_bin_getrandbits('01?01?01??01?01')
 ```
 
 `RandomSolver` has no restrictions on the number of values that you feed in this random cracker. However, it is important to notice that if you feed less than **624 32-bit integer values**, or some equivalent number of values in terms of **bytes** or **bits**, the solver's predicted random inner states might differ from that of the actual `random` module. In the future, I might develop a way that allows you to enumerate between different solutions, but for now, for whatever inputs you give in to the cracker, it will try to find the best solution it can.
