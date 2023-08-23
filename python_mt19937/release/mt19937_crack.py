@@ -147,10 +147,9 @@ class RandomSolver():
         if not self.started_init_seed_states:
             self.seed_state_variables = list(self.gen_state_lvars(n))
             self.started_init_seed_states = True
-
-        self.solver_constrants.extend([
-            self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
-        ])
+            self.solver_constrants.extend([
+                self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
+            ])
 
         return self.seed_state_variables
 
