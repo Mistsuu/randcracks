@@ -45,8 +45,8 @@ def test_recover_random_primes():
             # Statistically, next_prime only changes at most
             # the last 32 bits, so we can only obtain the 
             # first 1024 - 32 bits
-            rndSolver.submit_bin_getrandbits(f'{p:01024b}'[:-32] + '?'*32)
-            rndSolver.submit_bin_getrandbits(f'{q:01024b}'[:-32] + '?'*32)
+            z3_near_p = rndSolver.submit_bin_getrandbits(f'{p:01024b}'[:-32] + '?'*32)
+            z3_near_q = rndSolver.submit_bin_getrandbits(f'{q:01024b}'[:-32] + '?'*32)
         else:
             # If p & q are not primes, we just skip
             _, z3_near_p = rndSolver.skip_getrandbits(1024)
