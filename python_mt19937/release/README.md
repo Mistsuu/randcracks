@@ -1,6 +1,10 @@
 # `randcracks/python_mt19937`: Cracking Python's `random` module with the power of Z3.
 
-Cracking Python's `random` module with the power of **Z3**. **This code is heavily inspired from the project of https://github.com/tna0y/Python-random-module-cracker.** Tested with **Python 3.10**.
+Cracking Python's `random` module with the power of **Z3** and a small part of linear algebra that contributes largely on the speedup of the cracking process.
+
+**This code is heavily inspired from the project of https://github.com/tna0y/Python-random-module-cracker.** 
+
+Tested with **Python 3.10**.
 
 The script `mt19937_crack.py` provides you class `RandomSolver`, allowing you to feed directly outputs of `random.getrandbits(nbits)`, `random.randbytes(nbytes)`, and `random.random()` in order to: 
 
