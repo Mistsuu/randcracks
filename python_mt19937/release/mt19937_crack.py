@@ -1,5 +1,6 @@
 import random
 import gmpy2
+import os
 from z3 import *
 from z3wrapper import get_z3_answer
 from typing import Generator, Iterable
@@ -47,8 +48,8 @@ mat_U = [   gmpy2.mpz(270681289),
             gmpy2.mpz(2148540932),
         ]
 
-def mat_untamper(random_output: int):
-    return int(mul_vecl32(gmpy2.mpz(random_output), mat_U))
+def mat_untamper(getrandbits32_output: int):
+    return int(mul_vecl32(gmpy2.mpz(getrandbits32_output), mat_U))
 
 ####################################################################
 #            FUNCTIONS IN MERSENNE TWISTER MODELED IN Z3
@@ -126,13 +127,32 @@ class RandomSolver():
         self.solver_constrants = []
         self.key_variables = []
         self.variables = {}
+        self.seed_state_variables = []
 
         self.lindex = -1
         self.rindex = 0
         self.answer = None
 
+        self.started_init_seed_states = False
         self.started_finding_seed = False
         self.machine_byteorder = machine_byteorder
+
+    def init_seed_states(self) -> list[BitVecRef]:
+        """
+            This function basically add 624 states to the left
+            of the current solve if it doesn't exist yet.
+
+            Returns the Z3 variables corresponding to the seed states.
+        """
+        if not self.started_init_seed_states:
+            self.seed_state_variables = list(self.gen_state_lvars(n))
+            self.started_init_seed_states = True
+
+        self.solver_constrants.extend([
+            self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
+        ])
+
+        return self.seed_state_variables
 
     def init_seed_finder(self, seed_nbits: int) -> None:
         assert not self.started_finding_seed, \
@@ -146,7 +166,7 @@ class RandomSolver():
         mt_init_states, self.key_variables = z3_init_by_array(key_length)
         
         # Generate n variables to the left
-        z3_state_vars = list(self.gen_state_lvars(n))
+        z3_state_vars = self.init_seed_states()
         for i in range(n):
             self.solver_constrants.append(
                 mt_init_states[i] == z3_state_vars[i]
@@ -158,8 +178,9 @@ class RandomSolver():
     # =============================== SOLVERS ===============================
 
     def gen_state_lvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
-        assert not self.started_finding_seed, \
-            ValueError("Cannot add values to the left if the solver is already in the state of finding seed!")
+        assert not self.started_init_seed_states and not self.started_finding_seed, \
+            ValueError("Cannot add more values to the left if the solver "
+                       "is already in the state of knowing where it's seeded!")
 
         i = self.lindex
         for j in range(0, -n_vars, -1):
@@ -212,7 +233,8 @@ class RandomSolver():
         """
 
         # Sanity check
-        assert 0 <= value < 2**32, ValueError("You should submit a 32-bit value.")
+        assert 0 <= value < 2**32, \
+            ValueError("You should submit a 32-bit value.")
 
         # Create variables
         z3_state_var, = list(self.gen_state_rvars(1))
@@ -228,7 +250,8 @@ class RandomSolver():
         """
 
         # Sanity check
-        assert 0 <= value < 2**nbits, ValueError(f"You should submit a {nbits}-bit value.")
+        assert 0 <= value < 2**nbits, \
+            ValueError(f"You should submit a {nbits}-bit value.")
 
         for remaining_bits in range(nbits, 0, -32):
             # Extracting 32-bits from lsb to msb
@@ -246,6 +269,93 @@ class RandomSolver():
                 LShR(z3_tamper(z3_state_var), 32 - remaining_bits) == lsb_value
             ])
 
+    def submit_bin_getrandbits(self, binvalue: str) -> BitVecRef:
+        """
+            Submit a bitstring representation of an output `value = random.getrandbits(nbits)` to the solver.
+            It is permitted to put a `'?'` in the middle of the bitstring to represent unknown bits.
+
+            Returns `z3_output_var` where:
+                - `z3_output_var` is the z3 variable represents the output
+                   of `random.getrandbits(nbits)`. 
+                   
+                   This variable is extremely useful when we want to know 
+                   the values of the `'?'` bits in the binary string.
+        """
+        assert all(bit == '0' or bit == '1' or bit == '?' for bit in binvalue), \
+            ValueError(f"\"binvalue\" parameter should contains one of these characters only: '0', '1' or '?'.")
+
+        nbits = len(binvalue)
+        z3_output_pieces = []
+
+        for remaining_bits in range(nbits, 0, -32):
+            # Extracting 32-bits from lsb to msb
+            lsb_binvalue = binvalue[-32:]
+            lsb_binvalue_len = min(remaining_bits, 32)
+
+            # Update binvalue...
+            binvalue = binvalue[:-32]
+
+            # If all bits are normal, then just submit it like
+            # a normal value.
+            if all(bit == '0' or bit == '1' for bit in lsb_binvalue):
+                lsb_value = int(lsb_binvalue, 2)
+                self.submit_getrandbits(lsb_value, lsb_binvalue_len)
+                z3_output_pieces.append(
+                    BitVecVal(lsb_value, lsb_binvalue_len)
+                )
+                continue
+
+            # Create variables -- for cases where bits < 32
+            z3_state_var, = list(self.gen_state_rvars(1))
+            z3_output_piece = (
+                LShR(z3_tamper(z3_state_var), 32 - remaining_bits)
+                    if remaining_bits < 32
+                    else
+                z3_tamper(z3_state_var)
+            )
+
+            # Add constraints            
+            i = 0
+            while True:
+                # Skip the '?' symbols
+                while i < lsb_binvalue_len and lsb_binvalue[i] == '?':
+                    i += 1
+
+                # Exit if end
+                if i == lsb_binvalue_len:
+                    break
+                
+                # Get non '?' segment of the binary string
+                start_bit_pos = i
+                while i < lsb_binvalue_len and lsb_binvalue[i] != '?':
+                    i += 1
+                end_bit_pos = i-1
+
+                # Apply constraints to non '?' segment.
+                if start_bit_pos <= end_bit_pos:
+                    self.solver_constrants.extend([
+                        Extract(
+                            lsb_binvalue_len-1-start_bit_pos, 
+                            lsb_binvalue_len-1-end_bit_pos, 
+                            z3_output_piece
+                        ) == int(lsb_binvalue[start_bit_pos:end_bit_pos+1], 2)
+                    ])
+
+                # Exit if end
+                if i == lsb_binvalue_len:
+                    break
+
+            # Add to the collection of output pieces
+            z3_output_pieces.append(z3_output_piece)
+
+        # Create output reference variable
+        if len(z3_output_pieces) > 1:
+            z3_output_var = Concat(*z3_output_pieces[::-1])
+        else:
+            z3_output_var = z3_output_pieces[0]
+
+        return z3_output_var
+
     def submit_randbytes(self, value: bytes) -> None:
         """
             Submit an output of `value = random.randbytes(nbytes)` to the solver.
@@ -262,7 +372,8 @@ class RandomSolver():
         """
 
         # Sanity check
-        assert 0 <= value <= 1.0, ValueError("The output of random.random() limits to [0, 1) only.")
+        assert 0 <= value <= 1.0, \
+            ValueError("The output of random.random() limits to [0, 1) only.")
 
         # Get truncated outputs of random.getrandbits(32)
         tampered = int(value * 2**53)
@@ -286,7 +397,8 @@ class RandomSolver():
             `random.getrandbits()` are skipped, which can be specified in
             `nskips` option.
         """
-        assert 0 <= value < n, ValueError(f"You should submit a value in range [0, {n})")
+        assert 0 <= value < n, \
+            ValueError(f"You should submit a value in range [0, {n})")
         k = n.bit_length()
         for _ in range(nskips):
             _, z3_output_var = self.skip_getrandbits(k)
@@ -305,7 +417,8 @@ class RandomSolver():
             `nskips` option.
         """
 
-        assert start <= value < stop, ValueError(f"You should submit a value in range [{start}, {stop})")
+        assert start <= value < stop, \
+            ValueError(f"You should submit a value in range [{start}, {stop})")
         self.submit_randbelow(
             value - start, 
             stop - start, 
@@ -462,13 +575,29 @@ class RandomSolver():
         # unless we tell them to :)
         if self.answer != None and not force_redo:
             return
-
+        
         # Get answer from Z3 :)
         self.answer = get_z3_answer(self.solver_constrants, [])
         assert self.answer, "Cannot untwist this twister!"
         
         # Get current state
-        self.state = [self.answer[self.variables[self.rindex - i]].as_long() for i in range(n, 0, -1)]
+        self.state = []
+        for i in range(n, 0, -1):
+            assert self.rindex - i in self.variables, \
+                ValueError("The number of inputs are not sufficient for this algorithm to solve.\n" 
+                           "Please use the skip_xx() functions to fill in the missing input places.\n"
+                           "Alternatively, use init_seed_states() if you're certain that there are no previous values of random."
+                          )
+
+            variable_answer = self.answer[self.variables[self.rindex - i]]
+            self.state.append(
+                variable_answer.as_long()
+                    if variable_answer != None
+                    else
+                int.from_bytes(os.urandom(4), 'little')
+            )
+                                  
+        # Check if number of states match with n?
         assert len(self.state) == n, "Not enough states are recovered!"
 
         # Advance n times

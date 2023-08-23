@@ -41,20 +41,23 @@ def test_recover_random_primes():
         p = int.from_bytes(values[i][:128], 'big')
         q = int.from_bytes(values[i][128:], 'big')
 
-        _, z3_rand1 = rndSolver.skip_getrandbits(1024)
-        _, z3_rand2 = rndSolver.skip_getrandbits(1024)
         if gmpy2.is_prime(p) and gmpy2.is_prime(q):
             # Statistically, next_prime only changes at most
             # the last 32 bits, so we can only obtain the 
             # first 1024 - 32 bits
-            rndSolver.solver_constrants.extend([
-                z3.LShR(z3_rand1, 32) == (p >> 32),
-                z3.LShR(z3_rand2, 32) == (q >> 32),
-            ])
+            z3_near_p = rndSolver.submit_bin_getrandbits(f'{p:01024b}'[:-32] + '?'*32)
+            z3_near_q = rndSolver.submit_bin_getrandbits(f'{q:01024b}'[:-32] + '?'*32)
+        else:
+            # If p & q are not primes, we just skip
+            _, z3_near_p = rndSolver.skip_getrandbits(1024)
+            _, z3_near_q = rndSolver.skip_getrandbits(1024)
+
     rndSolver.solve()
 
     # Verify we've solve it correctly
     # by predicting newer outputs
+    print(f'new_guess = {rndSolver.random()}, actual = {random.random()}')
+    print(f'new_guess = {rndSolver.random()}, actual = {random.random()}')
     print(f'new_guess = {rndSolver.random()}, actual = {random.random()}')
     print(f'new_guess = {rndSolver.random()}, actual = {random.random()}')
 
