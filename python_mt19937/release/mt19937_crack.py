@@ -127,25 +127,31 @@ class RandomSolver():
         self.solver_constrants = []
         self.key_variables = []
         self.variables = {}
-        self.seed_state_variables = None
+        self.seed_state_variables = []
 
         self.lindex = -1
         self.rindex = 0
         self.answer = None
 
+        self.started_init_seed_states = False
         self.started_finding_seed = False
         self.machine_byteorder = machine_byteorder
 
-    def get_seed_state_variables(self) -> list[BitVecRef]:
+    def init_seed_states(self) -> list[BitVecRef]:
         """
             This function basically add 624 states to the left
             of the current solve if it doesn't exist yet.
+
+            Returns the Z3 variables corresponding to the seed states.
         """
-        if self.seed_state_variables == None:
+        if not self.started_init_seed_states:
             self.seed_state_variables = list(self.gen_state_lvars(n))
+            self.started_init_seed_states = True
+
         self.solver_constrants.extend([
             self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
         ])
+
         return self.seed_state_variables
 
     def init_seed_finder(self, seed_nbits: int) -> None:
@@ -160,7 +166,7 @@ class RandomSolver():
         mt_init_states, self.key_variables = z3_init_by_array(key_length)
         
         # Generate n variables to the left
-        z3_state_vars = self.get_seed_state_variables()
+        z3_state_vars = self.init_seed_states()
         for i in range(n):
             self.solver_constrants.append(
                 mt_init_states[i] == z3_state_vars[i]
@@ -172,8 +178,9 @@ class RandomSolver():
     # =============================== SOLVERS ===============================
 
     def gen_state_lvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
-        assert self.seed_state_variables == None and not self.started_finding_seed, \
-            ValueError("Cannot add values to the left if the solver is already in the state of finding values!")
+        assert not self.started_init_seed_states and not self.started_finding_seed, \
+            ValueError("Cannot add more values to the left if the solver "
+                       "is already in the state of knowing where it's seeded!")
 
         i = self.lindex
         for j in range(0, -n_vars, -1):
@@ -569,12 +576,6 @@ class RandomSolver():
         if self.answer != None and not force_redo:
             return
         
-        # We should include 624 seed state
-        # values to the left (since there are
-        # an additional information of the first
-        # state being 0x80000000.)
-        self.get_seed_state_variables()
-
         # Get answer from Z3 :)
         self.answer = get_z3_answer(self.solver_constrants, [])
         assert self.answer, "Cannot untwist this twister!"
@@ -582,6 +583,12 @@ class RandomSolver():
         # Get current state
         self.state = []
         for i in range(n, 0, -1):
+            assert self.rindex - i in self.variables, \
+                ValueError("The number of inputs are not sufficient for this algorithm to solve.\n" 
+                           "Please use the skip_xx() functions to fill in the missing input places.\n"
+                           "Alternatively, use init_seed_states() if you're certain that there are no previous values of random."
+                          )
+
             variable_answer = self.answer[self.variables[self.rindex - i]]
             self.state.append(
                 variable_answer.as_long()
