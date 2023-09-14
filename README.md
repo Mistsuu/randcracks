@@ -5,7 +5,9 @@ This repository will provide tools to crack random algorithm. It is made **100%*
 
 <p align="center">
   <img src="img/hello-world-using-random.png">
-  Hehe :'3 a seed cracker in Python~
+  <p>
+    Hehe :'3 a seed cracker in Python~
+  </p>
 </p>
 
 # Branches
