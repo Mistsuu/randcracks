@@ -573,16 +573,9 @@ class RandomSolver():
 
     # --------------------------------  solve():  -------------------------------
     #                     retrieve state array / seed recovering 
-        
-    def solve(self, force_redo=False) -> None:
-        # If it's already solved, just don't care 
-        # unless we tell them to :)
-        if self.answer != None and not force_redo:
-            return
-        
-        # Get answer from Z3 :)
-        self.answer = get_z3_answer(self.solver_constrants, [])
-        assert self.answer, "Cannot untwist this twister!"
+
+    def recover_states_from_answer(self) -> None:
+        assert self.answer, "Cannot recover states from this twister as there's no answer!"
         
         # Get current state
         self.state = []
@@ -607,6 +600,42 @@ class RandomSolver():
         # Advance n times
         for _ in range(n):
             self.advance()
+        
+    def solve(self, force_redo=False) -> None:
+        # If it's already solved, just don't care 
+        # unless we tell them to :)
+        if self.answer != None and not force_redo:
+            return
+        
+        # Get answer from Z3 :)
+        self.answer = get_z3_answer(self.solver_constrants, [])
+        
+        # Get states from answer.
+        self.recover_states_from_answer()
+
+    def persist_solve(self, force_redo=False) -> None:
+        """
+            Similar to `solve()`, but once the
+            answer is revealed, we add the result
+            to the current set of constraints.
+
+            This prevents us from exploring alternative
+            routes, but it helps when partial
+            solving performs better than full solve.
+
+            (example: solving for seed)
+        """
+
+        # If it's already solved, just don't care 
+        # unless we tell them to :)
+        if self.answer != None and not force_redo:
+            return
+        
+        # Get answer from Z3 :)
+        self.answer = get_z3_answer(self.solver_constrants, [])
+        
+        # Get states from answer.
+        self.recover_states_from_answer()
 
     def get_seed(self) -> int:
         assert self.started_finding_seed, \

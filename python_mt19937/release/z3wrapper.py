@@ -1,6 +1,10 @@
+from typing import Generator
 from z3 import *
 
-def get_z3_answers(constraints: list, variables_list: list):
+def get_z3_answers(
+    constraints: list, 
+    variables_list: list
+) -> Generator[ModelRef, None, None]:
     sat_solver = Solver()
     for constraint in constraints:
         sat_solver.add(constraint)
@@ -13,7 +17,10 @@ def get_z3_answers(constraints: list, variables_list: list):
             Or(*[variable != answer[variable] for variable in variables_list]) 
         )
 
-def get_z3_answer(constraints: list, variables_list: list):
+def get_z3_answer(
+    constraints: list, 
+    variables_list: list
+) -> ModelRef | None:
     sat_solver = Solver()
     for constraint in constraints:
         sat_solver.add(constraint)
