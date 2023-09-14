@@ -137,20 +137,25 @@ class RandomSolver():
         self.started_finding_seed = False
         self.machine_byteorder = machine_byteorder
 
-    def init_seed_states(self) -> list[BitVecRef]:
+    def init_seed_states(self) -> None:
         """
             This function basically add 624 states to the left
             of the current solve if it doesn't exist yet.
 
             Returns the Z3 variables corresponding to the seed states.
         """
-        if not self.started_init_seed_states:
-            self.seed_state_variables = list(self.gen_state_lvars(n))
-            self.started_init_seed_states = True
-            self.solver_constrants.extend([
-                self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
-            ])
+        assert not self.started_init_seed_states, \
+            ValueError("Seed state variables have already been created!")
 
+        self.seed_state_variables = list(self.gen_state_lvars(n))
+        self.started_init_seed_states = True
+        self.solver_constrants.extend([
+            self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
+        ])
+
+    def get_seed_states(self) -> list[BitVecRef]:
+        if not self.started_init_seed_states:
+            self.init_seed_states()
         return self.seed_state_variables
 
     def init_seed_finder(self, seed_nbits: int) -> None:
@@ -165,7 +170,7 @@ class RandomSolver():
         mt_init_states, self.key_variables = z3_init_by_array(key_length)
         
         # Generate n variables to the left
-        z3_state_vars = self.init_seed_states()
+        z3_state_vars = self.get_seed_states()
         for i in range(n):
             self.solver_constrants.append(
                 mt_init_states[i] == z3_state_vars[i]
@@ -177,7 +182,7 @@ class RandomSolver():
     # =============================== SOLVERS ===============================
 
     def gen_state_lvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
-        assert not self.started_init_seed_states and not self.started_finding_seed, \
+        assert not self.started_init_seed_states, \
             ValueError("Cannot add more values to the left if the solver "
                        "is already in the state of knowing where it's seeded!")
 
