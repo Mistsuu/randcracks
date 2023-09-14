@@ -137,20 +137,25 @@ class RandomSolver():
         self.started_finding_seed = False
         self.machine_byteorder = machine_byteorder
 
-    def init_seed_states(self) -> list[BitVecRef]:
+    def init_seed_states(self) -> None:
         """
             This function basically add 624 states to the left
             of the current solve if it doesn't exist yet.
 
             Returns the Z3 variables corresponding to the seed states.
         """
-        if not self.started_init_seed_states:
-            self.seed_state_variables = list(self.gen_state_lvars(n))
-            self.started_init_seed_states = True
-            self.solver_constrants.extend([
-                self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
-            ])
+        assert not self.started_init_seed_states, \
+            ValueError("Seed state variables have already been created!")
 
+        self.seed_state_variables = list(self.gen_state_lvars(n))
+        self.started_init_seed_states = True
+        self.solver_constrants.extend([
+            self.seed_state_variables[0] == BitVecVal(0x80000000, 32)
+        ])
+
+    def get_seed_states(self) -> list[BitVecRef]:
+        if not self.started_init_seed_states:
+            self.init_seed_states()
         return self.seed_state_variables
 
     def init_seed_finder(self, seed_nbits: int) -> None:
@@ -165,7 +170,7 @@ class RandomSolver():
         mt_init_states, self.key_variables = z3_init_by_array(key_length)
         
         # Generate n variables to the left
-        z3_state_vars = self.init_seed_states()
+        z3_state_vars = self.get_seed_states()
         for i in range(n):
             self.solver_constrants.append(
                 mt_init_states[i] == z3_state_vars[i]
@@ -177,7 +182,7 @@ class RandomSolver():
     # =============================== SOLVERS ===============================
 
     def gen_state_lvars(self, n_vars: int) -> Generator[BitVecRef, None, None]:
-        assert not self.started_init_seed_states and not self.started_finding_seed, \
+        assert not self.started_init_seed_states, \
             ValueError("Cannot add more values to the left if the solver "
                        "is already in the state of knowing where it's seeded!")
 
@@ -624,21 +629,55 @@ class RandomSolver():
 
         try:
             if isinstance(variable, BitVecRef):
-                return self.answer.evaluate(variable).as_long()
+                # Evaluate value
+                evaluated_value = self.answer.evaluate(variable)
+
+                # If evaluated value is also 
+                # a BitVec, just return a random
+                # value with similar size.
+                try:
+                    return evaluated_value.as_long()
+                except:
+                    # Get size
+                    nbits_value = evaluated_value.size()
+                    nbytes_gen  = (nbits_value >> 3) + 1
+                    nbits_gen   = nbytes_gen << 3
+
+                    # Create random
+                    random_nbytes_gen = os.urandom(nbytes_gen)
+                    random_nbits_gen  = int.from_bytes(random_nbytes_gen, 'little')
+                    return random_nbits_gen >> (nbits_gen - nbits_value)
+                
             elif isinstance(variable, FPRef):
+                # Evaluate value
+                evaluated_value = self.answer.evaluate(variable)
+
                 # It's always 64-bit value, so
                 # we don't have to worry about
                 # precision here.
-                sign        = self.answer.evaluate(variable).sign()
-                significand = self.answer.evaluate(variable).significand_as_long()
-                exponent    = self.answer.evaluate(variable).exponent_as_long()
-                return (
-                    (-1 if sign else 1) 
-                            *
-                    (significand / 2**52 + 1)
-                            *
-                    2**(exponent-1023)
-                )
+                try:
+                    sign        = evaluated_value.sign()
+                    significand = evaluated_value.significand_as_long()
+                    exponent    = evaluated_value.exponent_as_long()
+                    return (
+                        (-1 if sign else 1) 
+                                *
+                        (significand / 2**52 + 1)
+                                *
+                        2**(exponent-1023)
+                    )
+                except:
+                    sign        = -1 if os.urandom(1)[0] >> 7 else 1
+                    significand = int.from_bytes(os.urandom(8) >> (64 - 52), 'little')
+                    exponent    = int.from_bytes(os.urandom(2) >> (16 - 11), 'little')
+                    return (
+                        (-1 if sign else 1) 
+                                *
+                        (significand / 2**52 + 1)
+                                *
+                        2**(exponent-1023)
+                    )
+
             elif isinstance(variable, Iterable):
                 # Return as a list :)
                 results = []
