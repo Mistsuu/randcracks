@@ -573,55 +573,7 @@ class RandomSolver():
 
     # --------------------------------  solve():  -------------------------------
     #                     retrieve state array / seed recovering 
-        
-    def solve(self, force_redo=False) -> None:
-        # If it's already solved, just don't care 
-        # unless we tell them to :)
-        if self.answer != None and not force_redo:
-            return
-        
-        # Get answer from Z3 :)
-        self.answer = get_z3_answer(self.solver_constrants, [])
-        assert self.answer, "Cannot untwist this twister!"
-        
-        # Get current state
-        self.state = []
-        for i in range(n, 0, -1):
-            assert self.rindex - i in self.variables, \
-                ValueError("The number of inputs are not sufficient for this algorithm to solve.\n" 
-                           "Please use the skip_xx() functions to fill in the missing input places.\n"
-                           "Alternatively, use init_seed_states() if you're certain that there are no previous values of random."
-                          )
 
-            variable_answer = self.answer[self.variables[self.rindex - i]]
-            self.state.append(
-                variable_answer.as_long()
-                    if variable_answer != None
-                    else
-                int.from_bytes(os.urandom(4), 'little')
-            )
-                                  
-        # Check if number of states match with n?
-        assert len(self.state) == n, "Not enough states are recovered!"
-
-        # Advance n times
-        for _ in range(n):
-            self.advance()
-
-    def get_seed(self) -> int:
-        assert self.started_finding_seed, \
-            ValueError("You need to initiate the seed finding process first.")
-
-        # Attempt to solve if not solved
-        if self.answer == None:
-            self.solve()
-        
-        # Get key in it's unsigned-char form.
-        key = b''
-        for key_variable in self.key_variables:
-            key += self.answer[key_variable].as_long().to_bytes(4, self.machine_byteorder)
-        return int.from_bytes(key, 'little')
-    
     def get_skipped_variable_answer(self, variable: BitVecRef | FPRef | Iterable) -> int | float | list:
         # Attempt to solve if not solved
         if self.answer == None:
@@ -689,6 +641,88 @@ class RandomSolver():
         
         raise ValueError(f"Not implemented for this type of variable ({type(variable)})")
 
+    def recover_states_from_answer(self) -> None:
+        assert self.answer, "Cannot recover states from this twister as there's no answer!"
+        
+        # Get current state
+        self.state = []
+        for i in range(n, 0, -1):
+            assert self.rindex - i in self.variables, \
+                ValueError("The number of inputs are not sufficient for this algorithm to solve.\n" 
+                           "Please use the skip_xx() functions to fill in the missing input places.\n"
+                           "Alternatively, use init_seed_states() if you're certain that there are no previous values of random."
+                          )
+
+            variable_answer = self.answer[self.variables[self.rindex - i]]
+            self.state.append(
+                variable_answer.as_long()
+                    if variable_answer != None
+                    else
+                int.from_bytes(os.urandom(4), 'little')
+            )
+                                  
+        # Check if number of states match with n?
+        assert len(self.state) == n, "Not enough states are recovered!"
+
+        # Advance n times
+        for _ in range(n):
+            self.advance()
+        
+    def solve(self, force_redo=False) -> None:
+        # If it's already solved, just don't care 
+        # unless we tell them to :)
+        if self.answer != None and not force_redo:
+            return
+        
+        # Get answer from Z3 :)
+        self.answer = get_z3_answer(self.solver_constrants, [])
+        
+        # Get states from answer.
+        self.recover_states_from_answer()
+
+    def accumulate_solve(self, force_redo=False) -> None:
+        """
+            Similar to `solve()`, but once the
+            answer is revealed, we add the result
+            to the current set of constraints.
+
+            This prevents us from exploring alternative
+            routes, but it helps when partial
+            solving performs better than full solve.
+
+            (example: solving for seed)
+        """
+
+        # If it's already solved, just don't care 
+        # unless we tell them to :)
+        if self.answer != None and not force_redo:
+            return
+        
+        # Get answer from Z3 :)
+        self.answer = get_z3_answer(self.solver_constrants, [])
+        if self.answer:
+            self.solver_constrants.extend([
+                self.variables[variable_key] == self.get_skipped_variable_answer(self.variables[variable_key]) 
+                    for variable_key in self.variables
+            ])
+
+        # Get states from answer.
+        self.recover_states_from_answer()
+
+    def get_seed(self) -> int:
+        assert self.started_finding_seed, \
+            ValueError("You need to initiate the seed finding process first.")
+
+        # Attempt to solve if not solved
+        if self.answer == None:
+            self.solve()
+        
+        # Get key in it's unsigned-char form.
+        key = b''
+        for key_variable in self.key_variables:
+            key += self.answer[key_variable].as_long().to_bytes(4, self.machine_byteorder)
+        return int.from_bytes(key, 'little')
+    
     # =============================== GENERATE NEW VALUES ===============================
 
     def advance(self) -> None:
