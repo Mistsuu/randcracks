@@ -3,6 +3,8 @@
 # Introduction
 This repository will provide tools to crack random algorithm. It is made **100%** for educational purposes only *(and fun **:>**)*. 
 
+![hehe](img/hello-world-using-random.png)
+
 # Branches
 There should be two main branches, updated side-by-side: 
 - `release`  
