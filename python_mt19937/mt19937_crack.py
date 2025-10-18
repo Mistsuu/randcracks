@@ -6,7 +6,7 @@ from .z3wrapper import get_z3_answer
 from typing import Generator, Iterable
 
 # Custom library calls.
-from mathlib.matrix32 import mul_vecl32
+from .mathlib.matrix32 import mul_vecl32
 
 ####################################################################
 #  FUNCTIONS IN MERSENNE TWISTER MODELED AS MATRIX MULTIPLICATION
