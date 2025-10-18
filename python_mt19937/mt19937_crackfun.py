@@ -1,4 +1,4 @@
-from mt19937_crack import RandomSolver
+from .mt19937_crack import RandomSolver
 import random
 import sys
 sys.set_int_max_str_digits(0)
