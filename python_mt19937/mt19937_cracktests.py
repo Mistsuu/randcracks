@@ -1,6 +1,6 @@
 import random
 import os
-from mt19937_crack import RandomSolver
+from .mt19937_crack import RandomSolver
 
 def test_recover_seed():
     print("============================ RECOVER SEED TEST ============================")
