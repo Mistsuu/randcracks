@@ -1,12 +1,14 @@
+# pyproject.toml (đặt ở repo root)
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "randcracks"
-version = "0.0.0"
-description = "Crackers for MT19937, xorshift128+, and glibc random"
+name = "randcracks-local"
+version = "0.0.1"
 requires-python = ">=3.8"
+dependencies = ["z3-solver"]
 
-[tool.setuptools]
-packages = ["python_mt19937"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["python_mt19937*", "mathlib*", "z3wrapper*"]
