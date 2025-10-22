@@ -11,6 +11,22 @@ The script `mt19937_crack.py` provides you class `RandomSolver`, allowing you to
 - Predict newer values.
 - Recover the seed value.
 
+## How to install
+
+### Requirements
+
+- Python ≥ 3.8
+- Python packages: `z3-solver`, `gmpy2`
+
+```sh
+pip install z3-solver gmpy2
+```
+### Installation
+
+```sh
+pip install "git+https://github.com/vanmjnh/randcracks.git@pyproject"
+```
+
 ## Usages
 
 ### How to use `RandomSolver`
