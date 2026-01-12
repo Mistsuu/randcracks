@@ -1,8 +1,9 @@
 import random
 import gmpy2
 import os
-import mt19937_crack
 import z3
+
+import cracker
 
 def test_recover_random_primes():
     """
@@ -36,7 +37,7 @@ def test_recover_random_primes():
 
     # ======================== CLIENT ========================
     print(f'[i] Solving values from client...')
-    rndSolver = mt19937_crack.RandomSolver()
+    rndSolver = cracker.RandomSolver()
     for i in range(50):
         p = int.from_bytes(values[i][:128], 'big')
         q = int.from_bytes(values[i][128:], 'big')

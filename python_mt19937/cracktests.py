@@ -1,6 +1,7 @@
 import random
 import os
-from mt19937_crack import RandomSolver
+
+from cracker import RandomSolver
 
 def test_recover_seed():
     print("============================ RECOVER SEED TEST ============================")
@@ -175,17 +176,20 @@ def test_simple_solve_v2():
     randomSolver.solve()
 
     """
-        ============================ SIMPLE TEST V2 ============================
-        Traceback (most recent call last):
-        File "/home/achoo/randcracks/python_mt19937/release/mt19937_cracktests.py", line 184, in <module>
-            test_simple_solve_v2()
-        File "/home/achoo/randcracks/python_mt19937/release/mt19937_cracktests.py", line 175, in test_simple_solve_v2
-            randomSolver.solve()
-        File "/home/achoo/randcracks/python_mt19937/release/mt19937_crack.py", line 585, in solve
-            assert self.rindex - i in self.variables, \\
-        AssertionError: The number of inputs are not sufficient for this algorithm to solve.
-        Please use the skip_xx() functions to fill in the missing input places.
-        Alternatively, use init_seed_states() if you're certain that there are no previous values of random.
+    ============================ SIMPLE TEST V2 ============================
+    Traceback (most recent call last):
+    File "/home/achoo/projects/randcracks/python_mt19937/cracktests.py", line 207, in <module>
+        test_simple_solve_v2()
+    File "/home/achoo/projects/randcracks/python_mt19937/cracktests.py", line 176, in test_simple_solve_v2
+        randomSolver.solve()
+    File "/home/achoo/projects/randcracks/python_mt19937/cracker.py", line 681, in solve
+        self.recover_states_from_answer()
+    File "/home/achoo/projects/randcracks/python_mt19937/cracker.py", line 650, in recover_states_from_answer
+        assert self.rindex - i in self.variables, \
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    AssertionError: The number of inputs are not sufficient for this algorithm to solve.
+    Please use the skip_xx() functions to fill in the missing input places.
+    Alternatively, use init_seed_states() if you're certain that there are no previous values of random.
     """
 
 def test_simple_solve_v3():

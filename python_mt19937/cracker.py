@@ -1,11 +1,11 @@
 import random
 import gmpy2
 import os
+
 from z3 import *
 from z3wrapper import get_z3_answer
 from typing import Generator, Iterable
 
-# Custom library calls.
 from mathlib.matrix32 import mul_vecl32
 
 ####################################################################

@@ -99,7 +99,7 @@ def vec_to_states(v):
 #  (btw vector S is in vertical form 
 #  incase you're confused)
 #
-def generate_mat_xorshift128p():
+def generate_mat_xorshift128():
     Z64 = zero_matN(64)
     I64 = identity_matN(64)
 
@@ -146,7 +146,7 @@ def generate_mat_xorshift128p():
     x = mul_mat128
     return x(M4, x(M3, x(M2, M1)))
 
-xorshift128p_mat = generate_mat_xorshift128p()
+xorshift128_mat = generate_mat_xorshift128()
 
 ####################################################################
 #                              SOLVER
@@ -214,7 +214,7 @@ class RandomGeneratorVariantList:
 
 class RandomSolver:
     def __init__(self) -> None:
-        self.M = xorshift128p_mat
+        self.M = xorshift128_mat
         self.T = identity_matN(128)
 
         # Keep track of known bits of the XORShift++128
@@ -256,7 +256,7 @@ class RandomSolver:
             Submit bits of position [`ibit_l`, `ibit_r`] of the current state.
         """
         assert ibit_r - ibit_l + 1 <= 64 and 0 <= ibit_r < 64 and 0 <= ibit_l < 64, \
-            ValueError("XORShift128++ only has 64-bit states!")
+            ValueError("XORShift128 only has 64-bit states!")
         assert ibit_r >= ibit_l, \
             ValueError(f"ibit_r ({ibit_r}) must be >= than ibit_l ({ibit_l})!")
         assert len(state_partial_bits) == ibit_r - ibit_l + 1, \
