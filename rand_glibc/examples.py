@@ -1,4 +1,4 @@
-from rand_glibc_2_35_crack import crack, recover_seed
+from cracker import crack, recover_seed
 
 if __name__ == '__main__':
     # Seeded by time(NULL)

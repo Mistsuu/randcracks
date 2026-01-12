@@ -1,7 +1,8 @@
-from mt19937_crack import RandomSolver
 import random
 import sys
 sys.set_int_max_str_digits(0)
+
+from cracker import RandomSolver
 
 def counting_to_100_with_randrange():
     rndSolver = RandomSolver()

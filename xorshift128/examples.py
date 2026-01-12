@@ -1,4 +1,4 @@
-from xorshift128p_crack import RandomSolver, RandomGenerator, RandomGeneratorVariant
+from cracker import RandomSolver, RandomGenerator, RandomGeneratorVariant
 
 def sumbit_random_test():
     randSolver = RandomSolver()

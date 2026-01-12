@@ -6,7 +6,7 @@ misc
 */misc
 */.old
 
-# Custom for XORShift128+
+# Custom for XORShift128
 **/mathlib/cython/*.c
 **/mathlib/cython/lib
 **/mathlib/cython/tmp

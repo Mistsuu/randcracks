@@ -1,4 +1,4 @@
-# `randcracks/xorshift128p`
+# `randcracks/xorshift128`
 
 Cracking the following pattern in modern V8 javascript engine.
 ```js
@@ -80,4 +80,4 @@ for answer in randSolver.answers:
 ```
 
 ### Examples
-You can find some of the examples from `xorshift128p_examples.py` file.
+You can find some of the examples from `examples.py` file.
