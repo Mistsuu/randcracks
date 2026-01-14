@@ -51,7 +51,7 @@ class RandomGenerator:
     
 
 ####################################################################
-#            FUNCTIONS IN XORSHIFT++128 MODELED AS MATRICES
+#            FUNCTIONS IN XORSHIFT128 MODELED AS MATRICES
 ####################################################################
 
 #
@@ -217,7 +217,7 @@ class RandomSolver:
         self.M = xorshift128_mat
         self.T = identity_matN(128)
 
-        # Keep track of known bits of the XORShift++128
+        # Keep track of known bits of the XORShift128
         self.known_bits_stack = ''
         
         # Solve matrices for different start positions
