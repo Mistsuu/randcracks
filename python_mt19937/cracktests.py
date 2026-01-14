@@ -201,13 +201,13 @@ def test_simple_solve_v3():
     randomSolver.solve()
 
 if __name__ == '__main__':
-    # test_recover_seed()
+    test_recover_seed()
     # test_skipping_outputs()
     # test_shuffle()
     # test_punctured_getrandbits_values()
 
     # test_simple_solve_v1()
-    test_simple_solve_v2()
+    # test_simple_solve_v2()
     # test_simple_solve_v3()
     
     pass
