@@ -2,21 +2,18 @@ import gmpy2
 import struct
 
 from mathlib.matrixN import (
-    identity_matN, zero_matN, set_entry_matN, bitstring_to_vecN, 
+    identity_matN, zero_matN, set_entry_matN, bitstring_to_vecN,
     solve_right, kernel_right_basis
 )
-from mathlib.matrix64 import add_mat64, mul_mat64
-from mathlib.matrix128 import add_mat128, mul_mat128, combine_4_mat64
-
-# Debug imports
-from mathlib.matrixN import debug_matN, debug_vecN
+from mathlib.matrix64 import add_mat64
+from mathlib.matrix128 import mul_mat128, combine_4_mat64
 
 ####################################################################
 #                          DEFAULT GENERATOR
 ####################################################################
 
 class RandomGenerator:
-    def xs128p(self):
+    def xs128(self):
         s1 = self.state0 & 0xFFFFFFFFFFFFFFFF
         s0 = self.state1 & 0xFFFFFFFFFFFFFFFF
         s1 ^= (s1 << 23) & 0xFFFFFFFFFFFFFFFF
@@ -28,7 +25,7 @@ class RandomGenerator:
         generated = self.state0 & 0xFFFFFFFFFFFFFFFF
         return generated
 
-    def toDouble(self, value):
+    def to_double(self, value):
         double_bits = (value >> 12) | 0x3FF0000000000000
         return struct.unpack('d', struct.pack('<Q', double_bits))[0] - 1 
 
@@ -37,17 +34,17 @@ class RandomGenerator:
         self.state1 = state1
         self.batch = []
         for _ in range(forward_pos):
-            self.randomInt64()
+            self.random_i64()
 
-    def randomInt64(self):
+    def random_i64(self):
         if len(self.batch) == 0:
             for _ in range(64):
                 self.batch.append(self.state0)
-                self.xs128p()
+                self.xs128()
         return self.batch.pop()
 
     def random(self):
-        return self.toDouble(self.randomInt64())
+        return self.to_double(self.random_i64())
     
 
 ####################################################################
@@ -72,10 +69,7 @@ class RandomGenerator:
 # bit from state0 can change to state1.)
 #
 def vec_to_states(v):
-    bitstring = f'{v:0128b}'[::-1]
-    state0, state1 = bitstring[:64], bitstring[64:]
-    state0, state1 = int(state0, 2), int(state1, 2)
-    return state0, state1
+    return v & ((1<<64)-1), v>>64
 
 #
 # Get matrix M so that M * S creates
@@ -117,7 +111,7 @@ def generate_mat_xorshift128():
     # operation, we add I64 to this matrix.
     L23 = zero_matN(64)
     for i in range(64-23):
-        set_entry_matN(L23, i, i+23, 1)
+        set_entry_matN(L23, i+23, i, 1)
     M2 = combine_4_mat64(
         I64, Z64,
         Z64, add_mat64(I64, L23)
@@ -126,7 +120,7 @@ def generate_mat_xorshift128():
     # s1 ^= (s1 >> 17) & 0xFFFFFFFFFFFFFFFF
     R17 = zero_matN(64)
     for i in range(64-17):
-        set_entry_matN(R17, i+17, i, 1)
+        set_entry_matN(R17, i, i+17, 1)
     M3 = combine_4_mat64(
         I64, Z64,
         Z64, add_mat64(I64, R17)
@@ -136,13 +130,12 @@ def generate_mat_xorshift128():
     # s1 ^= (s0 >> 26) & 0xFFFFFFFFFFFFFFFF
     R26 = zero_matN(64)
     for i in range(64-26):
-        set_entry_matN(R26, i+26, i, 1)
+        set_entry_matN(R26, i, i+26, 1)
     M4 = combine_4_mat64(
         I64,                 Z64,
         add_mat64(I64, R26), I64
     )
 
-    # Just for faster notation
     x = mul_mat128
     return x(M4, x(M3, x(M2, M1)))
 
@@ -188,7 +181,6 @@ class RandomGeneratorVariantList:
     def __init__(self) -> None:
         self.__variants_list__ = []
         self.__size__ = 0
-        self.__start__ = 0
 
     def append(self, item: RandomGeneratorVariant) -> None:
         self.__variants_list__.append(item)
@@ -198,7 +190,6 @@ class RandomGeneratorVariantList:
         assert 0 <= index < self.__len__(), \
             ValueError(f"index should be in [0, {self.__len__()}) only.")
         
-        index += self.__start__
         for variant in self.__variants_list__:
             if index >= variant.n_variants:
                 index -= variant.n_variants
@@ -210,7 +201,7 @@ class RandomGeneratorVariantList:
             yield self.__getitem__(i)
 
     def __len__(self):
-        return max(self.__size__ - self.__start__, 0)
+        return self.__size__
 
 class RandomSolver:
     def __init__(self) -> None:
@@ -251,16 +242,16 @@ class RandomSolver:
     
     # ------------------------ submit_xx() sub-functions -----------------------
 
-    def submit_state_bits(self, state_partial_bits: str, ibit_l: int, ibit_r: int) -> None:
+    def submit_state_bits(self, state_partial_bits: str, ibit_hi: int, ibit_lo: int) -> None:
         """
-            Submit bits of position [`ibit_l`, `ibit_r`] of the current state.
+            Submit bits of position [`ibit_hi`, `ibit_lo`] of the current state.
         """
-        assert ibit_r - ibit_l + 1 <= 64 and 0 <= ibit_r < 64 and 0 <= ibit_l < 64, \
+        assert ibit_hi - ibit_lo + 1 <= 64 and 0 <= ibit_lo < 64 and 0 <= ibit_hi < 64, \
             ValueError("XORShift128 only has 64-bit states!")
-        assert ibit_r >= ibit_l, \
-            ValueError(f"ibit_r ({ibit_r}) must be >= than ibit_l ({ibit_l})!")
-        assert len(state_partial_bits) == ibit_r - ibit_l + 1, \
-            ValueError(f"Sanity check: You must submit a bitstring of len={ibit_r - ibit_l + 1}!")
+        assert ibit_hi >= ibit_lo, \
+            ValueError(f"({ibit_hi = }) must be >= than ({ibit_lo = })!")
+        assert len(state_partial_bits) == ibit_hi - ibit_lo + 1, \
+            ValueError(f"Sanity check: You must submit a bitstring of len={ibit_hi - ibit_lo + 1}!")
 
         self.known_bits_stack += state_partial_bits
 
@@ -268,7 +259,7 @@ class RandomSolver:
         # to update the matrices in a corresponding way.
         for start_pos in range(64):
             T = self.get_M_pow_i(self.current_pos[start_pos])
-            for ibit in range(ibit_l, ibit_r + 1):
+            for ibit in range(ibit_hi, ibit_lo-1, -1):
                 self.S[start_pos].append(T[ibit])
 
         self.update_inner_states()
@@ -283,7 +274,7 @@ class RandomSolver:
         # You could use unpack() or some crazy stuffs, 
         # but this is probably enough.
         double_bits = f'{int(value * 2**52):052b}' 
-        self.submit_state_bits(double_bits, 0, 51)
+        self.submit_state_bits(double_bits, 63, 12)
 
     def _submit_random_mul_const_2exp_l(self, value: int, l: int) -> None:
         """
@@ -297,8 +288,8 @@ class RandomSolver:
 
         leaked_double_bits = f'{value:0{l}b}'
         self.submit_state_bits(
-            leaked_double_bits, 
-            0, l-1
+            leaked_double_bits,
+            63, 63 - l + 1
         )
 
     def submit_random_mul_const(self, value: int, N: int) -> None:
@@ -337,8 +328,12 @@ class RandomSolver:
 
         # Sometimes, adding a certain value does not reveal
         # any known bits of the mantissa.
-        if len(leaked_double_bits) > 0:
-            self.submit_state_bits(leaked_double_bits, 0, len(leaked_double_bits) - 1)
+        l = len(leaked_double_bits)
+        if l > 0:
+            self.submit_state_bits(
+                leaked_double_bits,
+                63, 63 - l + 1
+            )
         else:
             # print('[i] Warning! No new information is gained when adding this value.')
             self.skip_random()
@@ -399,3 +394,4 @@ class RandomSolver:
         if len(self.answers) == 0:
             self.answers = None
             raise ValueError("Can't solve this shift!")
+

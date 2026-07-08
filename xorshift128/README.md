@@ -1,9 +1,17 @@
 # `randcracks/xorshift128`
 
-Cracking the following pattern in modern V8 javascript engine.
+Cracking the following pattern in ~modern V8 javascript engine~.
 ```js
 Math.floor(CONST * Math.random())
 ```
+
+## ⚠️ NOTE ⚠️
+V8 has *changed* the PRNG from `xorshift128` to `xorshift128+`, so this repository doesn't work as a cracker for V8's PRNG anymore.
+For more information, visit the following links:
+1. Commit: https://chromium-review.googlesource.com/c/v8/v8/+/7169184
+2. Discussion: https://issues.chromium.org/issues/456384547
+
+Funnily enough, `xorshift128+` was [originally used in V8](https://v8.dev/blog/math-random), not `xorshift128`. But due to the bug introduced in [this commit](https://chromium.googlesource.com/v8/v8.git/+/33fa357b6ff77e79b3a32ae0fa140662d91373d3%5E%21/#F2), the latter is used instead.
 
 This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. The method is inspired by the `fastrology` challenge set I played in `plaidCTF` recently.
 

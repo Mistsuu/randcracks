@@ -1,16 +1,16 @@
-from cracker import RandomSolver, RandomGenerator, RandomGeneratorVariant
+from cracker import RandomSolver
 
 def sumbit_random_test():
-    randSolver = RandomSolver()
-    randSolver.submit_random(0.15589505829365424)
-    randSolver.submit_random(0.4551868164930428)
-    randSolver.submit_random(0.16771727497700617)
-    randSolver.submit_random(0.10685554388753915)
-    randSolver.submit_random(0.4275409415243707)
+    solver = RandomSolver()
+    solver.submit_random(0.15589505829365424)
+    solver.submit_random(0.4551868164930428)
+    solver.submit_random(0.16771727497700617)
+    solver.submit_random(0.10685554388753915)
+    solver.submit_random(0.4275409415243707)
 
-    randSolver.solve()
-    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
-    for answer in randSolver.answers:
+    solver.solve()
+    print(f'[i] {len(solver.answers)} potential solutions exists.')
+    for answer in solver.answers:
         print(answer.random())
         print(answer.random())
         print('--------')
@@ -75,14 +75,14 @@ def submit_random_mul_const_test():
             convert_serial_to_list_of_outputs(serial)
         )
 
-    randSolver = RandomSolver()
+    solver = RandomSolver()
     for random_output in random_outputs:
-        randSolver.submit_random_mul_const(random_output, 14)
-    randSolver.solve()
+        solver.submit_random_mul_const(random_output, 14)
+    solver.solve()
 
-    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
-    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
-    print(f' L predict next serial:', generate_new_serial(randSolver.answers[0].random))
+    print(f'[i] {len(solver.answers)} potential solutions exists.')
+    print(' L predict next serial:', generate_new_serial(solver.answers[0].random))
+    print(' L predict next serial:', generate_new_serial(solver.answers[0].random))
 
 #
 # Example using outputs from `test/serial-gen.js`
@@ -126,14 +126,14 @@ def submit_random_mul_const_test_underdetermined_system():
             convert_serial_to_list_of_outputs(serial)
         )
 
-    randSolver = RandomSolver()
+    solver = RandomSolver()
     for random_output in random_outputs:
-        randSolver.submit_random_mul_const(random_output, 16)
-    randSolver.solve()
+        solver.submit_random_mul_const(random_output, 16)
+    solver.solve()
 
-    print(f'[i] {len(randSolver.answers)} potential solutions exists.')
+    print(f'[i] {len(solver.answers)} potential solutions exists.')
     correct_answer = None
-    for answer in randSolver.answers:
+    for answer in solver.answers:
         # We run through all solutions to arrive
         # at the correct solution.
         next_serial = generate_new_serial(answer.random)
@@ -144,15 +144,15 @@ def submit_random_mul_const_test_underdetermined_system():
         # But we're assuming that we only
         # know first output.
         if correct_answer != None:
-            print(f'[i] Found an answer that matches the next serial!')
+            print('[i] Found an answer that matches the next serial!')
             break
 
-    print(f' L predict next serial:', generate_new_serial(correct_answer.random))
-    print(f' L predict next serial:', generate_new_serial(correct_answer.random))
-    print(f' L predict next serial:', generate_new_serial(correct_answer.random))
-    print(f' L predict next serial:', generate_new_serial(correct_answer.random))
+    print(' L predict next serial:', generate_new_serial(correct_answer.random))
+    print(' L predict next serial:', generate_new_serial(correct_answer.random))
+    print(' L predict next serial:', generate_new_serial(correct_answer.random))
+    print(' L predict next serial:', generate_new_serial(correct_answer.random))
 
 if __name__ == '__main__':
     sumbit_random_test()
-    # submit_random_mul_const_test()
-    # submit_random_mul_const_test_underdetermined_system()
+    submit_random_mul_const_test()
+    submit_random_mul_const_test_underdetermined_system()
