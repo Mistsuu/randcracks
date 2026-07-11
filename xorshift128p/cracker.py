@@ -1,0 +1,471 @@
+import gmpy2
+import struct
+import tqdm
+
+from dataclasses import dataclass
+
+from mathlib.matrixN import (
+    identity_matN, zero_matN, set_entry_matN, bitstring_to_vecN,
+)
+from mathlib.matrixN_isd import (
+    approx_solve_right,
+)
+from mathlib.matrix64 import add_mat64
+from mathlib.matrix128 import mul_mat128, combine_4_mat64
+from mathlib.add2_stats import build_carry_probabilities
+
+####################################################################
+#                          DEFAULT GENERATOR
+####################################################################
+
+class RandomGenerator:
+    def xs128p(self):
+        s1 = self.state0 & 0xFFFFFFFFFFFFFFFF
+        s0 = self.state1 & 0xFFFFFFFFFFFFFFFF
+        s1 ^= (s1 << 23) & 0xFFFFFFFFFFFFFFFF
+        s1 ^= (s1 >> 17) & 0xFFFFFFFFFFFFFFFF
+        s1 ^= s0 & 0xFFFFFFFFFFFFFFFF
+        s1 ^= (s0 >> 26) & 0xFFFFFFFFFFFFFFFF
+        self.state0 = s0
+        self.state1 = s1 & 0xFFFFFFFFFFFFFFFF
+        generated = (s0 + s1) & 0xFFFFFFFFFFFFFFFF
+        return generated
+
+    def to_double(self, value):
+        double_bits = (value >> 12) | 0x3FF0000000000000
+        return struct.unpack('d', struct.pack('<Q', double_bits))[0] - 1 
+
+    def __init__(self, state0: int, state1: int, forward_pos: int = 0) -> None:
+        self.state0 = state0
+        self.state1 = state1
+        self.batch = []
+        for _ in range(forward_pos):
+            self.random_i64()
+
+    def random_i64(self):
+        if len(self.batch) == 0:
+            for _ in range(64):
+                self.batch.append((self.state0 + self.state1) & 0xFFFFFFFFFFFFFFFF)
+                self.xs128p()
+        return self.batch.pop()
+
+    def random(self):
+        return self.to_double(self.random_i64())
+    
+
+####################################################################
+#            FUNCTIONS IN XORSHIFT128 MODELED AS MATRICES
+####################################################################
+
+#
+# The idea is to craft a vector 
+# in the following form:
+#     [ state0 | state1 ] => S
+# where each entry of vector is a bit
+# of state0, state1. (2 64-bit values)
+#
+# By doing this, we can use matrix multiplication
+# to influence the bits from state0 to state1,
+# or/and state1 to state0.
+#
+# (at first, I thought to arrange them
+# as 2 rows/cols of a matrix, but then I 
+# realized that it is impossible to
+# use matrix multiplication so that
+# bit from state0 can change to state1.)
+#
+def vec_to_states(v):
+    return v & ((1<<64)-1), v>>64
+
+#
+# Get matrix M so that M * S creates
+# new vector [ state0 | state1 ] that is
+# similar to what xs128p() produces.
+#
+# (you can cache M btw :>, because
+# this matrix does not depend on S.)
+#
+# You can divide this matrix to 4 sections:
+# ┌──────────────────────┬──────────────────────┐
+# │      state0 bits     │      state1 bits     │
+# │       influence      │       influence      │
+# │        itself        │        state0        │
+# ├──────────────────────┼──────────────────────┤
+# │      state0 bits     │      state1 bits     │
+# │       influence      │       influence      │
+# │        state1        │        itself        │
+# └──────────────────────┴──────────────────────┘
+#
+#  (btw vector S is in vertical form 
+#  incase you're confused)
+#
+def generate_mat_xorshift128():
+    Z64 = zero_matN(64)
+    I64 = identity_matN(64)
+
+    # This is basically swap state0 with state1.
+    # s1 = state0 & 0xFFFFFFFFFFFFFFFF
+    # s0 = state1 & 0xFFFFFFFFFFFFFFFF
+    M1 = combine_4_mat64(
+        Z64, I64,
+        I64, Z64
+    )
+
+    # s1 ^= (s1 << 23) & 0xFFFFFFFFFFFFFFFF
+    # This is just a shift left matrix :>
+    # To be able to represent shift and self-XOR 
+    # operation, we add I64 to this matrix.
+    L23 = zero_matN(64)
+    for i in range(64-23):
+        set_entry_matN(L23, i+23, i, 1)
+    M2 = combine_4_mat64(
+        I64, Z64,
+        Z64, add_mat64(I64, L23)
+    )
+
+    # s1 ^= (s1 >> 17) & 0xFFFFFFFFFFFFFFFF
+    R17 = zero_matN(64)
+    for i in range(64-17):
+        set_entry_matN(R17, i, i+17, 1)
+    M3 = combine_4_mat64(
+        I64, Z64,
+        Z64, add_mat64(I64, R17)
+    )
+
+    # s1 ^= s0 & 0xFFFFFFFFFFFFFFFF
+    # s1 ^= (s0 >> 26) & 0xFFFFFFFFFFFFFFFF
+    R26 = zero_matN(64)
+    for i in range(64-26):
+        set_entry_matN(R26, i, i+26, 1)
+    M4 = combine_4_mat64(
+        I64,                 Z64,
+        add_mat64(I64, R26), I64
+    )
+
+    x = mul_mat128
+    return x(M4, x(M3, x(M2, M1)))
+
+xorshift128_mat = generate_mat_xorshift128()
+
+####################################################################
+#                              SOLVER
+####################################################################
+
+class RandomGeneratorVariant:
+    def __init__(self, w: gmpy2.mpz, K: list, forward_pos: int) -> None:
+        self.w = w
+        self.K = K
+        self.cache = {}
+        self.n_variants = pow(2, len(K))
+        self.forward_pos = forward_pos
+
+    def __getitem__(self, key: int) -> RandomGenerator:
+        assert 0 <= key < self.n_variants, \
+            ValueError(f"key should be in [0, {self.n_variants}) only.")
+        
+        if key not in self.cache:
+            w = self.w
+            K = self.K
+            l = len(K)
+            for ibit, bit in enumerate(f'{key:0{l}b}'):
+                if bit == '1':
+                    w ^= K[ibit]
+
+            # Cache for later usages...
+            state0, state1 = vec_to_states(w)
+            self.cache[key] = RandomGenerator(
+                                state0, state1, 
+                                self.forward_pos
+                              )
+            
+        return self.cache[key]
+    
+    def random(self):
+        raise ValueError(f"This is not a RandomGenerator object. This is RandomGeneratorVariant, which generates variants of RandomGenerator based on the solutions of RandomSolver. To access a RandomGenerator object, use [] operator. The argument should be in the range of [0, {self.n_variants}).")
+
+class RandomGeneratorVariantList:
+    def __init__(self) -> None:
+        self.__variants_list__ = []
+        self.__size__ = 0
+
+    def append(self, item: RandomGeneratorVariant) -> None:
+        self.__variants_list__.append(item)
+        self.__size__ += item.n_variants
+
+    def __getitem__(self, index: int) -> RandomGenerator:
+        assert 0 <= index < self.__len__(), \
+            ValueError(f"index should be in [0, {self.__len__()}) only.")
+        
+        for variant in self.__variants_list__:
+            if index >= variant.n_variants:
+                index -= variant.n_variants
+                continue
+            return variant[index]
+        
+    def __iter__(self):
+        for i in range(self.__size__):
+            yield self.__getitem__(i)
+
+    def __len__(self):
+        return self.__size__
+
+@dataclass
+class BiasMatrixRow:
+    row: gmpy2.mpz
+    bias: float
+
+class RandomSolver:
+    def __init__(self, max_relation_bias=0.07) -> None:
+        self.M = xorshift128_mat
+        self.T = identity_matN(128)
+        self.MAX_RELATION_BIAS = max_relation_bias
+
+        # Keep track of known bits of the XORShift128
+        self.known_bits_stack = ''
+        
+        # Solve matrices for different start positions
+        self.S           = [[]   for i in range(64)]
+        self.current_pos = [63-i for i in range(64)]
+        self.forward_pos = [i    for i in range(64)]
+        self.answers     = None
+
+        # Cache for every value of M^x
+        self.cache_pow_M = []
+
+    # ------------------------- some crazy inner stuffs  ----------------------
+    #                  ( not really crazy, I just want to sleep )
+
+    def update_cache_pow_M(self):
+        for _ in range(64):
+            self.cache_pow_M.append(self.T)
+            self.T = mul_mat128(self.M, self.T)
+
+    def get_M_pow_i(self, i):
+        while i >= len(self.cache_pow_M):
+            self.update_cache_pow_M()
+        return self.cache_pow_M[i]
+    
+    def update_inner_states(self):
+        for start_pos in range(64):
+            if self.current_pos[start_pos] % 64 == 0:
+                self.current_pos[start_pos] += 128
+            self.current_pos[start_pos] -= 1
+            self.forward_pos[start_pos] += 1
+    
+    # ------------------------ submit_xx() sub-functions -----------------------
+
+    def submit_output_bits(self, partial: str, ibit_hi: int, ibit_lo: int) -> None:
+        """
+            Submit bits of position [`ibit_hi`, `ibit_lo`] of the current output.
+        """
+        assert ibit_hi - ibit_lo + 1 <= 64 and 0 <= ibit_lo < 64 and 0 <= ibit_hi < 64, \
+            ValueError("XORShift128 only has 64-bit states!")
+        assert ibit_hi >= ibit_lo, \
+            ValueError(f"({ibit_hi = }) must be >= than ({ibit_lo = })!")
+        assert len(partial) == ibit_hi - ibit_lo + 1, \
+            ValueError(f"you must submit a bitstring of len={ibit_hi - ibit_lo + 1}!")
+        assert all(output_bit in '01?' for output_bit in partial), \
+            ValueError(f"input contains invalid characters: {partial}")
+
+        known_digits = []
+        for ibit in range(64):
+            if ibit_lo <= ibit <= ibit_hi:
+                bit = partial[::-1][ibit - ibit_lo]
+                if bit == '?':
+                    known_digits.append(None)
+                else:
+                    known_digits.append(int(bit))
+            else:
+                known_digits.append(None)
+
+        prob_carry = build_carry_probabilities(known_digits)
+
+        # Iterate through every possible start positions
+        # to update the matrices in a corresponding way.
+
+        for ibit in range(64):
+            if known_digits[ibit] is None:
+                continue
+            
+            prob0 = prob_carry[ibit][0]
+            prob1 = prob_carry[ibit][1]
+            probs = prob_carry[ibit][known_digits[ibit]] * 0.5 + 0.5
+
+            # x[i] ^ y[i] == (x + y)[i]
+            if prob0 >= 1 - self.MAX_RELATION_BIAS:
+                self.known_bits_stack += str(known_digits[ibit])
+
+                for start_pos in range(64):
+                    T = self.get_M_pow_i(self.current_pos[start_pos])
+
+                    self.S[start_pos].append(
+                        BiasMatrixRow(
+                            row  = T[ibit] ^ T[ibit + 64],
+                            bias = 1 - prob0,
+                        )
+                    )
+
+            # x[i] ^ y[i] ^ 1 == (x + y)[i]
+            if prob1 >= 1 - self.MAX_RELATION_BIAS:
+                self.known_bits_stack += str(known_digits[ibit] ^ 1)
+
+                for start_pos in range(64):
+                    T = self.get_M_pow_i(self.current_pos[start_pos])
+
+                    self.S[start_pos].append(
+                        BiasMatrixRow(
+                            row  = T[ibit] ^ T[ibit + 64],
+                            bias = 1 - prob1
+                        )
+                    )
+
+            # x[i+1] ^ y[i+1] ^ x[i] == (x + y)[i+1]
+            if ibit < 63 and known_digits[ibit+1] is not None and probs >= 1 - self.MAX_RELATION_BIAS:
+                self.known_bits_stack += str(known_digits[ibit+1])
+
+                for start_pos in range(64):
+                    T = self.get_M_pow_i(self.current_pos[start_pos])
+
+                    self.S[start_pos].append(
+                        BiasMatrixRow(
+                            row  = T[ibit + 1] ^ T[ibit + 64 + 1] ^ T[ibit],
+                            bias = 1 - probs
+                        )
+                    )
+
+        self.update_inner_states()
+
+    def submit_random(self, value: float) -> None:
+        """
+            Add result of `Math.random()`.
+        """
+        assert value >= 0 and value < 1, \
+            ValueError("You must submit values in [0, 1)!")
+
+        # You could use unpack() or some crazy stuffs, 
+        # but this is probably enough.
+        double_bits = f'{int(value * 2**52):052b}' 
+        self.submit_output_bits(double_bits, 63, 12)
+
+    def _submit_random_mul_const_2exp_l(self, value: int, l: int) -> None:
+        """
+            Add result of `Math.floor(Math.random() * Math.pow(2, l))`.
+            Unsafe because it doesn't check l.
+            You should use submit_random_mul_const() instead.
+        """
+        if l > 52:
+            value >>= (l-52)
+            l = 52
+
+        leaked_double_bits = f'{value:0{l}b}'
+        self.submit_output_bits(
+            leaked_double_bits,
+            63, 63 - l + 1
+        )
+
+    def submit_random_mul_const(self, value: int, N: int) -> None:
+        """
+            Add result of `Math.floor(Math.random() * CONST)`.
+        """
+        # Simple case for powers of 2.        
+        if N >= 2 and N & (N-1) == 0:
+            return self._submit_random_mul_const_2exp_l(
+                      value, int(N).bit_length() - 1
+                   )
+        
+        value = int(value)
+        assert 0 <= value < N, \
+            ValueError(f"Math.floor(Math.random() * {N}) cannot produce output {value}.")
+        assert 1 < N <= 2**52, \
+            ValueError("Not implemented for constants outside the range (1, 2**52] because of possible precision lost.")
+                
+        #
+        # Depending on the value and CONST,
+        # we can leak some of the first few bits
+        # from the states.
+        #
+        # We can do this by noticing that
+        # when values goes from x/CONST to (x+1)/CONST
+        # some bits at the beginning of mantissa
+        # do not change.
+        #
+        lapprox_double_bits = f'{int( value      / N * 2**52)    :052b}'
+        rapprox_double_bits = f'{int((value + 1) / N * 2**52) - 1:052b}'
+        leaked_double_bits = ''
+        for bit_l, bit_r in zip(lapprox_double_bits, rapprox_double_bits):
+            if bit_l != bit_r:
+                break
+            leaked_double_bits += bit_l
+
+        # Sometimes, adding a certain value does not reveal
+        # any known bits of the mantissa.
+        l = len(leaked_double_bits)
+        if l > 0:
+            self.submit_output_bits(
+                leaked_double_bits,
+                63, 63 - l + 1
+            )
+        else:
+            # print('[i] Warning! No new information is gained when adding this value.')
+            self.skip_random()
+
+    # ------------------------ skip_xx() sub-functions -----------------------
+    #                      (although there's just skip_random())
+    def skip_random(self):
+        """
+            Probably will be able to return "ticket"
+            to a skipped value?
+        """
+
+        # Yeah... For now just do nothing.
+        self.update_inner_states()
+
+    # --------------------------------  solve():  -------------------------------
+    #                             retrieve state array 
+
+    def solve(self, force_redo=False, **kwargs) -> None:
+        # If it's already solved, just don't care 
+        # unless we tell them to :)
+        if self.answers is not None and not force_redo:
+            return
+        
+        # This could happen during the fact that
+        # submit_random_mul_const() sometimes will 
+        # not add any bits to the array...
+        assert len(self.known_bits_stack) > 0, \
+            ValueError("Can't solve with an empty stomach man! Please call submit_xx() functions to give me something to gobble :) But if you did call submit_random_mul_const(), there might be a chance that your input was not able to leak any state bits... For that I'm truly sorry :(")
+        
+        # Find answer using some linear algrebra
+        # magics.
+        self.answers = RandomGeneratorVariantList()
+        for start_pos in (progress_bar := tqdm.trange(64)):
+            progress_bar.set_description_str(f'solving: #answers = {len(self.answers)}')
+
+            S         = list(map(lambda x: x.row,  self.S[start_pos]))
+            bias_list = list(map(lambda x: x.bias, self.S[start_pos]))
+
+            # Solve original state vectors
+            v = bitstring_to_vecN(self.known_bits_stack)
+            w = approx_solve_right(
+                S, v,
+                len(S), 128, 
+                bias_list, 
+                **kwargs
+            )
+
+            # Update number of solutions
+            if w is not None:
+                # Create object holding potential
+                # variants of the solutions
+                # (not generate all of it in an array
+                # because n_solutions scale with O(2^N))
+                self.answers.append(
+                    RandomGeneratorVariant(w, [], self.forward_pos[start_pos])
+                )
+
+        # Almost forgot to let user know
+        # that the solution might not be possible...
+        if len(self.answers) == 0:
+            self.answers = None
+            raise ValueError("Can't solve this shift!")
+

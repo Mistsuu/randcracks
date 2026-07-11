@@ -1,0 +1,219 @@
+diff --git cuBJMM+/Makefile cuBJMM+/Makefile
+index ca88d9e..0e55ba1 100644
+--- cuBJMM+/Makefile
++++ cuBJMM+/Makefile
+@@ -6,7 +6,7 @@ LD = $(NVCC)
+ OPT = -O2
+ OMP = -fopenmp
+ CPPSTD = -std=c++20
+-NVCCFLAGS = $(OPT) $(CPPSTD) $(GENCODE_FLAGS) -Xcompiler $(OMP)
++NVCCFLAGS = $(OPT) $(CPPSTD) $(GENCODE_FLAGS) -Xcompiler "$(OMP)" $(EXTRA_FLAGS)
+ LDFLAGS = $(GENCODE_FLAGS) -Xcompiler $(OMP)
+ LDLIBS = -lpng ./cryptanalysislib/deps/m4ri/.libs/libm4ri.a
+ 
+@@ -40,3 +40,4 @@ bjmm.out: bjmm_gpu.cu.o bjmm_cpu.cu.o
+ 
+ clean:
+ 	rm -f *.o *.out
++
+diff --git cuBJMM+/bjmm_constant.cuh cuBJMM+/bjmm_constant.cuh
+index 518e6e9..94502d7 100644
+--- cuBJMM+/bjmm_constant.cuh
++++ cuBJMM+/bjmm_constant.cuh
+@@ -7,16 +7,27 @@ using namespace std;
+ 
+ namespace cfg
+ {
++#if defined(BJMM_N) && defined(BJMM_K) && defined(BJMM_W) && defined(BJMM_P) && defined(BJMM_L1) && defined(BJMM_L2)
++    constexpr int n = BJMM_N;
++    constexpr int k = BJMM_K;
++    constexpr int w = BJMM_W;
++    constexpr int p = BJMM_P;
++    constexpr int l1 = BJMM_L1;
++    constexpr int l2 = BJMM_L2;
++#else
++#define USE_DEFAULT_PARAMETERS
+     constexpr int n = 431;
+     constexpr int k = 345;
+     constexpr int w = 10;
+     constexpr int p = 8;
+     constexpr int l1 = 16;
+     constexpr int l2 = 12;
++    const string input_path = "./Challenges/Goppa/Goppa_" + to_string(n);
++#endif
+     constexpr int l = l1 + l2;
+     constexpr int nkl = n - k - l;
+     constexpr int kl = k + l;
+-    const string input_path = "./Challenges/Goppa/Goppa_" + to_string(n);
+ };
+ 
+ #endif // CUBJMM_PLUS_BJMM_CONSTANT_H
++
+diff --git cuBJMM+/bjmm_cpu.cu cuBJMM+/bjmm_cpu.cu
+index e98fd35..f56f2d5 100644
+--- cuBJMM+/bjmm_cpu.cu
++++ cuBJMM+/bjmm_cpu.cu
+@@ -10,25 +10,33 @@
+ #include "custom_matrix.h"
+ #include "bjmm_constant.cuh"
+ #include "bjmm_gpu.cuh"
++#include "helper.h"
+ #pragma GCC target("avx2")
+ 
+ using namespace std;
+ 
+ int main(int argc, char *argv[])
+ {
++    // argv[1] = input_file
++    if (argc <= 1)
++        return 3;
++
++    // argv[2] = number of threads (optional, default to 1)
+     int thread_num = 1;
+-    if (argc > 1)
+-    {
++
++#ifdef USE_DEFAULT_PARAMETERS
++    if (argc > 1) {
+         thread_num = atoi(argv[1]);
++#else
++    if (argc > 2) {
++        thread_num = atoi(argv[2]);
++#endif
+         if (thread_num > omp_get_max_threads())
+-        {
+             thread_num = omp_get_max_threads();
+-        }
+         else if (thread_num <= 0)
+-        {
+             thread_num = 1;
+-        }
+     }
++
+     bitset<cfg::n - cfg::k> s;
+     bitset<cfg::n> e_permuted[thread_num];
+     mzd_t *mzd_h[thread_num], *mzd_h_T[thread_num], *mzd_h_fliped[thread_num];
+@@ -44,17 +52,29 @@ int main(int argc, char *argv[])
+         matrix_data[idx] = init_matrix_data(mzd_h[idx]->ncols);
+         mzd_h_fliped[idx] = matrix_init(cfg::n - cfg::k, cfg::n + 1);
+     }
++
++    // reads input challenge file
++#ifdef USE_DEFAULT_PARAMETERS
+     ifstream in(cfg::input_path);
++#else
++    ifstream in(argv[1]);
++#endif
++    if (!in)
++        return 2;
+     cin.rdbuf(in.rdbuf());
++
+     for (int i = 0; i < 9 + cfg::k; i++)
+     {
+         string input_string;
+         int bit;
+         getline(cin, input_string);
++        
++        // line 6: w
+         if (i == 5)
+         {
+             assert(cfg::w == stoi(input_string));
+         }
++        // line 7+: H^transpose
+         else if (i >= 7 && i < 7 + cfg::k)
+         {
+             for (int j = 0; j < cfg::n - cfg::k; j++)
+@@ -63,6 +83,7 @@ int main(int argc, char *argv[])
+                 mzd_write_bit(mzd_h_init, j, cfg::n - cfg::k + (i - 7), bit);
+             }
+         }
++        // line 8+k: s^transpose
+         else if (i == 8 + cfg::k)
+         {
+             s = bitset<cfg::n - cfg::k>(input_string);
+@@ -73,29 +94,29 @@ int main(int argc, char *argv[])
+             }
+         }
+     }
++    // H^transpose: identity part :)
+     for (int i = 0; i < cfg::n - cfg::k; i++)
+     {
+         mzd_write_bit(mzd_h_init, i, i, 1);
+     }
++
++    // init misc.
+     random_device rnd1, rnd2;
+-    uint64_t seedl = rnd1();
+-    uint64_t seedr = rnd2();
+-    uint64_t seed;
+-    seed = seedl << 32;
+-    seed += seedr;
++    uint64_t seed = ((uint64_t)rnd1() << 32) + rnd2();
+     random_seed(seed);
++
+     if (!initialize_gpu(thread_num))
+-    {
+         return 1;
+-    }
+ 
++    // run
++    cerr << "debug: running..." << endl;
+     int chk = 0;
+     int target_tid = 0;
+ #pragma omp parallel num_threads(thread_num)
+     {
+         while (!chk)
+         {
+-            int tid = omp_get_thread_num();
++            const int tid = omp_get_thread_num();
+             mzd_copy(mzd_h[tid], mzd_h_init);
+             mzp_copy(permutation[tid], permutation_init);
+             constexpr size_t m4ri_k = matrix_opt_k(cfg::n - cfg::k, MATRIX_AVX_PADDING(cfg::n));
+@@ -116,6 +137,7 @@ int main(int argc, char *argv[])
+         }
+     }
+ 
++    // check
+     bitset<cfg::n> e;
+     bitset<cfg::n - cfg::k> He;
+     for (int i = 0; i < cfg::n; i++)
+@@ -134,6 +156,9 @@ int main(int argc, char *argv[])
+             He = He ^ h_col;
+         }
+     }
++
++
++    // free
+     uninitialize_gpu(thread_num);
+     mzd_free(mzd_h_init);
+     mzp_free(permutation_init);
+@@ -145,7 +170,11 @@ int main(int argc, char *argv[])
+         free_matrix_data(matrix_data[idx]);
+         mzd_free(mzd_h_fliped[idx]);
+     }
++
++
++    // print & check (pt. 2)
+     cout << "e (solution): " << e << endl;
+     assert(He == s);
+     return 0;
+ }
++
+diff --git cuBJMM+/bjmm_gpu.cu cuBJMM+/bjmm_gpu.cu
+index 013e36a..990948e 100644
+--- cuBJMM+/bjmm_gpu.cu
++++ cuBJMM+/bjmm_gpu.cu
+@@ -242,7 +242,7 @@ bool allocate_memory_gpu(int thread_num, vector<int> &dev_list)
+         cudaMalloc((void **)&gd_solutionFound[idx], sizeof(int));
+         cudaMemset(gd_solutionFound[idx], 0, sizeof(int));
+     }
+-    constexpr array<int, numRightCombination * pL1> right_combination = make_combination(hsRightStartIdx, hsRightEndIdx);
++    static array<int, numRightCombination * pL1> right_combination = make_combination(hsRightStartIdx, hsRightEndIdx);
+     cudaMalloc((void **)&gd_rightCombination, sizeof(int) * numRightCombination * pL1);
+     cudaMemcpy(gd_rightCombination, right_combination.begin(), sizeof(int) * numRightCombination * pL1, cudaMemcpyHostToDevice);
+ 
+@@ -523,3 +523,4 @@ bitset<cfg::n> BJMM(uint64_t **orig_hs)
+ 
+     return earray;
+ }
++

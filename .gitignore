@@ -10,3 +10,7 @@ misc
 **/mathlib/cython/*.c
 **/mathlib/cython/lib
 **/mathlib/cython/tmp
+
+# Custom for XORShift128+
+**/mathlib/CU_BJMM
+
