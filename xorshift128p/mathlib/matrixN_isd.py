@@ -117,7 +117,9 @@ def find_e(H: list[gmpy2.mpz], s: gmpy2.mpz, n, k, w, p=8, l=16, l1=8, timeout:f
             return False
 
     def build_solve_runner():
-        os.chdir(os.path.join(os.path.dirname(__file__), "CU_BJMM/cuBJMM+"))
+        cwd = os.getcwd()
+
+        os.chdir(os.path.join(CUR_DIR, "CU_BJMM/cuBJMM+"))
         subprocess.run(['make', 'clean'], capture_output=True)
 
         make_arg0 = "EXTRA_FLAGS="
@@ -140,6 +142,7 @@ def find_e(H: list[gmpy2.mpz], s: gmpy2.mpz, n, k, w, p=8, l=16, l1=8, timeout:f
         except PermissionError:
             pass
 
+        os.chdir(cwd)
         result.check_returncode()
 
     challenge_file = make_temp_challenge_file()
@@ -148,6 +151,9 @@ def find_e(H: list[gmpy2.mpz], s: gmpy2.mpz, n, k, w, p=8, l=16, l1=8, timeout:f
         build_solve_runner()
 
     try:
+        cwd = os.getcwd()
+        os.chdir(CUR_DIR)
+
         result = subprocess.run(
             ['CU_BJMM/cuBJMM+/bjmm.out', challenge_file.name, '16'], 
             capture_output=True, 
@@ -155,6 +161,8 @@ def find_e(H: list[gmpy2.mpz], s: gmpy2.mpz, n, k, w, p=8, l=16, l1=8, timeout:f
         )
     except subprocess.TimeoutExpired:
         result = None
+    finally:
+        os.chdir(cwd)
 
     # input(f'Read the file at {challenge_file.name}')
     challenge_file.close()
@@ -168,34 +176,6 @@ def find_e(H: list[gmpy2.mpz], s: gmpy2.mpz, n, k, w, p=8, l=16, l1=8, timeout:f
 
     return Pe
 
-if __name__ == '__main__':
-    from sage.all import random_matrix, GF, vector, shuffle
-    from matrixN import debug_vecN
-
-    n = 431
-    k = 345
-    w = 10
-    H = random_matrix(GF(2), n-k, n)
-    e = [1]*w + [0]*(n-w)
-    shuffle(e)
-    e = vector(GF(2), e)
-    s = H*e
-    print('e  =', ''.join(map(str, e)))
-
-    Hgmpy2 = []
-    for row in H:
-        row = int(''.join(map(str, row))[::-1], 2)
-        row = gmpy2.mpz(row)
-        Hgmpy2.append(row)
-
-    sgmpy2 = gmpy2.mpz(0)
-    for i_col, col in enumerate(s):
-        if col:
-            sgmpy2 |= gmpy2.bit_set(gmpy2.mpz(0), i_col)
-
-    Pe = find_e(Hgmpy2, sgmpy2, n, k, w, l=28, l1=16)
-    print('e\' =', end=' ')
-    debug_vecN(Pe, n)
 
 def check_isd_solver_installed():
     CUR_DIR = os.path.dirname(__file__)
