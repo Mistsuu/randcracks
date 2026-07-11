@@ -1,21 +1,27 @@
-import os
+import subprocess
 
-from cracker import RandomGenerator, RandomSolver
+from cracker import RandomSolver
 
-rng = RandomGenerator(
-        int.from_bytes(os.urandom(8), 'big'),
-        int.from_bytes(os.urandom(8), 'big'),
-      )
+CONST = 3456
+exec_result = subprocess.run(
+            ['node', '-e', 
+             'for (let i = 0; i < 512; ++i)   '
+            f'    console.log(Math.floor(Math.random() * {CONST}))  ' ], 
+            capture_output=True).stdout
+
+random_outputs = filter(lambda x: x, exec_result.split(b'\n'))
+random_outputs = list(map(int, random_outputs))
 
 solver = RandomSolver()
+for x in random_outputs[:196]:
+    solver.submit_random_mul_const(x, CONST)
+solver.solve(timeout=1)
 
-CONST = 65537 
-for t in range(100):
-    solver.submit_random_mul_const(int(rng.random() * CONST), CONST)
-
-solver.solve(timeout=10)
-
-# from mathlib.matrixN import debug_matN
-# print(solver.known_bits_stack)
-# debug_matN(list(map(lambda x: x.row, solver.S[0])), len(solver.S[0]), 128)
+for i, answer in enumerate(solver.answers):
+    print()
+    print(f'[i] Guessing new values (universe {i}):')
+    print(f"{'x':>7} {'y':>7}")
+    print("-" * 15)
+    for j in range(64):
+        print(f"{int(answer.random() * CONST):>7d} {random_outputs[196 + j]:>7d}")
 
