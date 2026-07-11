@@ -6,7 +6,7 @@ Math.floor(CONST * Math.random())
 ```
 
 ## ⚠️ NOTE ⚠️
-V8 has *changed* the PRNG from `xorshift128` to `xorshift128+`, so this repository doesn't work as a cracker for V8's PRNG anymore.
+V8 has *changed* the PRNG from `xorshift128` to `xorshift128+`, so this works as a replacement for the original cracker.
 For more information, visit the following links:
 1. Commit: https://chromium-review.googlesource.com/c/v8/v8/+/7169184
 2. Discussion: https://issues.chromium.org/issues/456384547
@@ -15,12 +15,15 @@ Funnily enough, `xorshift128+` was [originally used in V8](https://v8.dev/blog/m
 
 This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. The method is inspired by the `fastrology` challenge set I played in `plaidCTF`, combined with the methodology in the `xoshiro256++` challenge in `BRICS+ CTF 2024`.
 
+Tested and worked in `Node 26.4.0`.
+
 ## Prerequisites
 - `git`
 - `make`
 - `gcc`, `g++`
 - `nvcc` *(which requires NVIDIA card)*
 - `patch`
+- `node` *(for testing at `examples.py`)*
 
 ## Pros ✅ include:
 - Have some *(but a little bit cumbersome)* way to enumerate through different solutions.
@@ -31,6 +34,7 @@ This project is based on the work of [v8_rand_buster](https://github.com/d0nutpt
 ## Cons ❌ include:
 - Have to manually set parameters to tune the program. Informations on the parameters may be added later.
 - Have to have an NVIDIA GPU card :(
+- Currently not efficient as this method requires solving an overdetermined system of equation, which may requires more input than needed. It is recommended to use [Scott Contini's implementation](https://github.com/ScottContini/a_better_xorshift128-inverter) to recover the seed using only 2 `Math.random()` output.
   
 ## Install
 
