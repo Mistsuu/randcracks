@@ -1,6 +1,6 @@
-# `randcracks/xorshift128`
+# `randcracks/xorshift128p`
 
-Cracking the following pattern in ~modern V8 javascript engine~.
+Cracking the following pattern in modern V8 javascript engine.
 ```js
 Math.floor(CONST * Math.random())
 ```
@@ -13,16 +13,16 @@ For more information, visit the following links:
 
 Funnily enough, `xorshift128+` was [originally used in V8](https://v8.dev/blog/math-random), not `xorshift128`. But due to the bug introduced in [this commit](https://chromium.googlesource.com/v8/v8.git/+/33fa357b6ff77e79b3a32ae0fa140662d91373d3%5E%21/#F2), the latter is used instead.
 
-This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. The method is inspired by the `fastrology` challenge set I played in `plaidCTF` recently.
+This project is based on the work of [v8_rand_buster](https://github.com/d0nutptr/v8_rand_buster) *(yes, I kinda copied the description from the original one too...)* However, instead of using `z3` module in `Python`, this one utilized the power of linear-algebra with matrices in `GF(2)` implemented in `gmpy2` combined with the speed of `Cython` to achieve a much, much faster runtime. The method is inspired by the `fastrology` challenge set I played in `plaidCTF`, combined with the methodology in the `xoshiro256++` challenge in `BRICS+ CTF 2024`.
 
 ## Pros ✅ include:
 - Have some *(but a little bit cumbersome)* way to enumerate through different solutions.
 - Can work better with a much smaller `CONST`.
 - No `sagemath` required.
-- No crazy `Cython` install stuffs.
+- ~No crazy `Cython` install stuffs.~
 
 ## Cons ❌ include:
-- Slower 10x than it's `unstable_cython` counterpart. A full recovery with enough inputs should take you around 10 seconds to solve.
+- Have to manually set parameters to tune the program. Informations may be added later.
   
 ## Install
 
