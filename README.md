@@ -13,9 +13,10 @@ This repository will provide tools to crack random algorithm. It is made **100%*
 # Branches
 There should be two main branches, updated side-by-side: 
 - `release`  
-- `unstable_cython`. 
+- `unstable_cython`
+- 🌿 `dev/xorshift128+` 🌿 - cracking XORShift128+, held together using ducktape
   
-The latter uses Cython code to boost speed to some mathematical operations, making it x10 times faster than its Python counterpart on the former branch. But as the name suggests, it is very unstable and may not be able to run on some machines.
+The 2nd branch uses Cython code to boost speed to some mathematical operations, making it x10 times faster than its Python counterpart on the former branch. But as the name suggests, it is very unstable and may not be able to run on some machines.
 
 # I don't know how to name this section...
 And while there're already many repos that can do this, I also want to create some more relaxed, while systematic way to crack random algorithms, instead of having to transform outputs everytime to suit the other programmer's code **:>** *(but I hope I don't complicated things too much...)*
