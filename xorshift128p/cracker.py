@@ -32,7 +32,7 @@ class RandomGenerator:
         return generated
 
     def to_double(self, value):
-        double_bits = (value >> 12) | 0x3FF0000000000000
+        double_bits = (value & 0x000FFFFFFFFFFFFF) | 0x3FF0000000000000
         return struct.unpack('d', struct.pack('<Q', double_bits))[0] - 1 
 
     def __init__(self, state0: int, state1: int, forward_pos: int = 0) -> None:
@@ -44,7 +44,7 @@ class RandomGenerator:
 
     def random_i64(self):
         if len(self.batch) == 0:
-            for _ in range(64):
+            for _ in range(62):
                 self.batch.append((self.state0 + self.state1) & 0xFFFFFFFFFFFFFFFF)
                 self.xs128p()
         return self.batch.pop()
@@ -224,9 +224,9 @@ class RandomSolver:
         self.known_bits_stack = ''
         
         # Solve matrices for different start positions
-        self.S           = [[]   for i in range(64)]
-        self.current_pos = [63-i for i in range(64)]
-        self.forward_pos = [i    for i in range(64)]
+        self.S           = [[]   for i in range(62)]
+        self.current_pos = [61-i for i in range(62)]
+        self.forward_pos = [i    for i in range(62)]
         self.answers     = None
 
         # Cache for every value of M^x
@@ -236,7 +236,7 @@ class RandomSolver:
     #                  ( not really crazy, I just want to sleep )
 
     def update_cache_pow_M(self):
-        for _ in range(64):
+        for _ in range(62):
             self.cache_pow_M.append(self.T)
             self.T = mul_mat128(self.M, self.T)
 
@@ -246,9 +246,9 @@ class RandomSolver:
         return self.cache_pow_M[i]
     
     def update_inner_states(self):
-        for start_pos in range(64):
-            if self.current_pos[start_pos] % 64 == 0:
-                self.current_pos[start_pos] += 128
+        for start_pos in range(62):
+            if self.current_pos[start_pos] % 62 == 0:
+                self.current_pos[start_pos] += 124
             self.current_pos[start_pos] -= 1
             self.forward_pos[start_pos] += 1
     
@@ -269,14 +269,15 @@ class RandomSolver:
 
         known_digits = []
         for ibit in range(64):
-            if ibit_lo <= ibit <= ibit_hi:
-                bit = partial[::-1][ibit - ibit_lo]
-                if bit == '?':
-                    known_digits.append(None)
-                else:
-                    known_digits.append(int(bit))
-            else:
+            if not (ibit_lo <= ibit <= ibit_hi):
                 known_digits.append(None)
+                continue
+
+            bit = partial[::-1][ibit - ibit_lo]
+            if bit not in '01':
+                known_digits.append(None)
+            else:
+                known_digits.append(int(bit))
 
         prob_carry = build_carry_probabilities(known_digits)
 
@@ -295,7 +296,7 @@ class RandomSolver:
             if prob0 >= 1 - self.MAX_RELATION_BIAS:
                 self.known_bits_stack += str(known_digits[ibit])
 
-                for start_pos in range(64):
+                for start_pos in range(62):
                     T = self.get_M_pow_i(self.current_pos[start_pos])
 
                     self.S[start_pos].append(
@@ -309,7 +310,7 @@ class RandomSolver:
             if prob1 >= 1 - self.MAX_RELATION_BIAS:
                 self.known_bits_stack += str(known_digits[ibit] ^ 1)
 
-                for start_pos in range(64):
+                for start_pos in range(62):
                     T = self.get_M_pow_i(self.current_pos[start_pos])
 
                     self.S[start_pos].append(
@@ -323,7 +324,7 @@ class RandomSolver:
             if ibit < 63 and known_digits[ibit+1] is not None and probs >= 1 - self.MAX_RELATION_BIAS:
                 self.known_bits_stack += str(known_digits[ibit+1])
 
-                for start_pos in range(64):
+                for start_pos in range(62):
                     T = self.get_M_pow_i(self.current_pos[start_pos])
 
                     self.S[start_pos].append(
@@ -345,7 +346,7 @@ class RandomSolver:
         # You could use unpack() or some crazy stuffs, 
         # but this is probably enough.
         double_bits = f'{int(value * 2**52):052b}' 
-        self.submit_output_bits(double_bits, 63, 12)
+        self.submit_output_bits(double_bits, 51, 0)
 
     def _submit_random_mul_const_2exp_l(self, value: int, l: int) -> None:
         """
@@ -360,7 +361,7 @@ class RandomSolver:
         leaked_double_bits = f'{value:0{l}b}'
         self.submit_output_bits(
             leaked_double_bits,
-            63, 63 - l + 1
+            51, 51 - l + 1
         )
 
     def submit_random_mul_const(self, value: int, N: int) -> None:
@@ -403,7 +404,7 @@ class RandomSolver:
         if l > 0:
             self.submit_output_bits(
                 leaked_double_bits,
-                63, 63 - l + 1
+                51, 51 - l + 1
             )
         else:
             # print('[i] Warning! No new information is gained when adding this value.')
@@ -438,7 +439,7 @@ class RandomSolver:
         # Find answer using some linear algrebra
         # magics.
         self.answers = RandomGeneratorVariantList()
-        for start_pos in (progress_bar := tqdm.trange(64)):
+        for start_pos in (progress_bar := tqdm.trange(62)):
             progress_bar.set_description_str(f'solving: #answers = {len(self.answers)}')
 
             S         = list(map(lambda x: x.row,  self.S[start_pos]))
