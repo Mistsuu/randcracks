@@ -269,14 +269,15 @@ class RandomSolver:
 
         known_digits = []
         for ibit in range(64):
-            if ibit_lo <= ibit <= ibit_hi:
-                bit = partial[::-1][ibit - ibit_lo]
-                if bit == '?':
-                    known_digits.append(None)
-                else:
-                    known_digits.append(int(bit))
-            else:
+            if not (ibit_lo <= ibit <= ibit_hi):
                 known_digits.append(None)
+                continue
+
+            bit = partial[::-1][ibit - ibit_lo]
+            if bit not in '01':
+                known_digits.append(None)
+            else:
+                known_digits.append(int(bit))
 
         prob_carry = build_carry_probabilities(known_digits)
 
